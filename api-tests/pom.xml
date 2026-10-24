@@ -92,6 +92,7 @@
                 <delete dir="${project.build.directory}/allure-results" quiet="true"/>
                 <delete dir="${project.build.directory}/surefire-reports" quiet="true"/>
                 <mkdir dir="${project.build.directory}/allure-results/history"/>
+                <copy file="${project.basedir}/src/test/resources/categories.json" todir="${project.build.directory}/allure-results"/>
                 <copy todir="${project.build.directory}/allure-results/history" failonerror="false">
                   <fileset dir="${project.basedir}/allure-history" erroronmissingdir="false" includes="**/*"/>
                 </copy>

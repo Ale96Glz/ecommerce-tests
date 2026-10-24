@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Gateway caído",
+    "matchedStatuses": ["broken"],
+    "traceRegex": ".*(ConnectException|UnknownHostException|SSLHandshakeException).*"
+  },
+  {
+    "name": "Respuesta inesperada",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*Expected status code.*"
+  },
+  {
+    "name": "Aserción",
+    "matchedStatuses": ["failed"]
+  }
+]
