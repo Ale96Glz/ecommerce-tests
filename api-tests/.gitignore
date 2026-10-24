@@ -1,0 +1,4 @@
+.cursor/
+target/
+.allure/
+allure-results/
