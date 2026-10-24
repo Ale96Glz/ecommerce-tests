@@ -2,3 +2,4 @@
 target/
 .allure/
 allure-results/
+allure-history/

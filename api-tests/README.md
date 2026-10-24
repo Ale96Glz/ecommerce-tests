@@ -20,6 +20,8 @@ mvn test
 mvn allure:serve
 ```
 
+`mvn test` guarda la barra de esa ejecución. La Tendencia muestra una barra más a partir de la segunda corrida.
+
 ## Casos
 
 | Caso | Resultado |

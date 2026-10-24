@@ -50,6 +50,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.2</version>
         <configuration>
+          <testFailureIgnore>true</testFailureIgnore>
           <systemPropertyVariables>
             <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
           </systemPropertyVariables>
@@ -59,6 +60,68 @@
         <groupId>io.qameta.allure</groupId>
         <artifactId>allure-maven</artifactId>
         <version>2.12.0</version>
+        <configuration>
+          <resultsDirectory>${project.build.directory}/allure-results</resultsDirectory>
+          <reportDirectory>${project.build.directory}/allure-report</reportDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>reporte-allure</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>preparar-historial-allure</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <delete dir="${project.build.directory}/allure-results" quiet="true"/>
+                <mkdir dir="${project.build.directory}/allure-results/history"/>
+                <copy todir="${project.build.directory}/allure-results/history" failonerror="false">
+                  <fileset dir="${project.basedir}/allure-history" erroronmissingdir="false" includes="**/*"/>
+                </copy>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>guardar-historial-allure</id>
+            <phase>test</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${project.basedir}/allure-history"/>
+                <delete quiet="true">
+                  <fileset dir="${project.basedir}/allure-history" includes="**/*"/>
+                </delete>
+                <copy todir="${project.basedir}/allure-history">
+                  <fileset dir="${project.build.directory}/allure-report/history" includes="**/*"/>
+                </copy>
+                <condition property="pruebas.fallidas">
+                  <resourcecount when="greater" count="0">
+                    <fileset dir="${project.build.directory}/surefire-reports" includes="*.txt" erroronmissingdir="false">
+                      <containsregexp expression="Failures: [1-9]|Errors: [1-9]"/>
+                    </fileset>
+                  </resourcecount>
+                </condition>
+                <fail message="Hay pruebas fallidas" if="pruebas.fallidas"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
