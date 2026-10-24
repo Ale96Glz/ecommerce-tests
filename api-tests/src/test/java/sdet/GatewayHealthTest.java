@@ -1,5 +1,6 @@
 package sdet;
 
+import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import static org.hamcrest.Matchers.equalTo;
 class GatewayHealthTest extends GatewayTest {
   @Test
   @DisplayName("El gateway responde health")
+  @Description("GET /actuator/health responde 200 y status UP.")
   void gatewayRespondeHealth() {
     given()
         .when()

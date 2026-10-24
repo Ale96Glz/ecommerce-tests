@@ -1,5 +1,6 @@
 package sdet;
 
+import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import static org.hamcrest.Matchers.equalTo;
 class PedidosTest extends GatewayTest {
   @Test
   @DisplayName("Un pedido sin token recibe 401")
+  @Description("GET /api/v1/pedido sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
   void pedidoSinTokenRecibe401() {
     given()
         .when()
@@ -26,6 +28,7 @@ class PedidosTest extends GatewayTest {
 
   @Test
   @DisplayName("Un pedido con token inválido recibe 401")
+  @Description("Un Bearer inválido responde 401 con el mensaje Token inválido o expirado.")
   void pedidoConTokenInvalidoRecibe401() {
     given()
         .header("Authorization", "Bearer token-falso")

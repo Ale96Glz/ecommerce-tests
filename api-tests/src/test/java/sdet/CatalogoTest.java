@@ -1,5 +1,6 @@
 package sdet;
 
+import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import static org.hamcrest.Matchers.not;
 class CatalogoTest extends GatewayTest {
   @Test
   @DisplayName("El catálogo de productos es público")
+  @Description("GET /api/v1/producto responde 200 con un arreglo de id numérico y nombre.")
   void catalogoDeProductosEsPublico() {
     given()
         .when()
@@ -29,6 +31,7 @@ class CatalogoTest extends GatewayTest {
 
   @Test
   @DisplayName("El catálogo de categorías es público")
+  @Description("GET /api/v1/categoria responde 200 con un arreglo de id numérico y nombre.")
   void catalogoDeCategoriasEsPublico() {
     given()
         .when()

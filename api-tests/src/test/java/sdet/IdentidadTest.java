@@ -1,5 +1,6 @@
 package sdet;
 
+import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -18,6 +19,7 @@ import static org.hamcrest.Matchers.instanceOf;
 class IdentidadTest extends GatewayTest {
   @Test
   @DisplayName("El registro crea un usuario")
+  @Description("El registro responde 201 con userId numérico, email, rol USER y token.")
   void registroCreaUnUsuario() {
     String email = emailNuevo();
     esUsuario(postIdentidad(REGISTRO, usuario(email, CONTRASENA)), 201, email);
@@ -25,6 +27,7 @@ class IdentidadTest extends GatewayTest {
 
   @Test
   @DisplayName("El inicio de sesión devuelve un token")
+  @Description("El login responde 200 con userId numérico, email, rol USER y token.")
   void inicioDeSesionDevuelveUnToken() {
     String email = emailNuevo();
     postIdentidad(REGISTRO, usuario(email, CONTRASENA)).then().statusCode(201);
@@ -34,6 +37,7 @@ class IdentidadTest extends GatewayTest {
 
   @Test
   @DisplayName("Una contraseña incorrecta recibe 401")
+  @Description("Una contraseña incorrecta responde 401 con el mensaje Credenciales invalidas.")
   void contrasenaIncorrectaRecibe401() {
     String email = emailNuevo();
     postIdentidad(REGISTRO, usuario(email, CONTRASENA)).then().statusCode(201);
@@ -49,6 +53,7 @@ class IdentidadTest extends GatewayTest {
 
   @Test
   @DisplayName("Un usuario no puede crear una categoría")
+  @Description("Un USER que crea una categoría responde 403 con el mensaje Se requiere rol ADMIN.")
   void usuarioNoPuedeCrearUnaCategoria() {
     String email = emailNuevo();
     postIdentidad(REGISTRO, usuario(email, CONTRASENA)).then().statusCode(201);
@@ -74,6 +79,7 @@ class IdentidadTest extends GatewayTest {
 
   @Test
   @DisplayName("Un email inválido recibe 400")
+  @Description("Un email inválido responde 400 con el mensaje email: El email no es valido.")
   void emailInvalidoRecibe400() {
     postIdentidad(REGISTRO, usuario("no-es-email", CONTRASENA))
         .then()
@@ -86,6 +92,7 @@ class IdentidadTest extends GatewayTest {
 
   @Test
   @DisplayName("Un email repetido recibe 409")
+  @Description("Registrar el mismo email por segunda vez responde 409.")
   void emailRepetidoRecibe409() {
     String email = emailNuevo();
     Map<String, String> cuerpo = usuario(email, CONTRASENA);
