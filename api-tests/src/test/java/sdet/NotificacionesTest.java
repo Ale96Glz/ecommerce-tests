@@ -1,7 +1,11 @@
 package sdet;
 
 import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,9 +17,12 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 
+@Epic("Plataforma E-commerce")
 @Feature("Notificaciones")
+@Severity(SeverityLevel.NORMAL)
 class NotificacionesTest extends GatewayTest {
   @Test
+  @Story("Una notificación sin token recibe 401")
   @DisplayName("Una notificación sin token recibe 401")
   @Description("GET /api/v1/notificacion/mias sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
   void notificacionSinTokenRecibe401() {
@@ -31,6 +38,7 @@ class NotificacionesTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario ve sus notificaciones")
   @DisplayName("Un usuario ve sus notificaciones")
   @Description("GET /api/v1/notificacion/mias con token de USER responde 200 con un arreglo.")
   void usuarioVeSusNotificaciones() {

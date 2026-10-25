@@ -1,7 +1,12 @@
 package sdet;
 
 import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Step;
+import io.qameta.allure.Story;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
@@ -15,9 +20,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
 
+@Epic("Plataforma E-commerce")
 @Feature("Identidad")
+@Severity(SeverityLevel.CRITICAL)
 class IdentidadTest extends GatewayTest {
   @Test
+  @Story("El registro crea un usuario")
   @DisplayName("El registro crea un usuario")
   @Description("El registro responde 201 con userId numérico, email, rol USER y token.")
   void registroCreaUnUsuario() {
@@ -26,6 +34,7 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("El inicio de sesión devuelve un token")
   @DisplayName("El inicio de sesión devuelve un token")
   @Description("El login responde 200 con userId numérico, email, rol USER y token.")
   void inicioDeSesionDevuelveUnToken() {
@@ -36,6 +45,7 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Una contraseña incorrecta recibe 401")
   @DisplayName("Una contraseña incorrecta recibe 401")
   @Description("Una contraseña incorrecta responde 401 con el mensaje Credenciales invalidas.")
   void contrasenaIncorrectaRecibe401() {
@@ -52,6 +62,7 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario no puede crear una categoría")
   @DisplayName("Un usuario no puede crear una categoría")
   @Description("Un USER que crea una categoría responde 403 con el mensaje Se requiere rol ADMIN.")
   void usuarioNoPuedeCrearUnaCategoria() {
@@ -78,6 +89,7 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un email inválido recibe 400")
   @DisplayName("Un email inválido recibe 400")
   @Description("Un email inválido responde 400 con el mensaje email: El email no es valido.")
   void emailInvalidoRecibe400() {
@@ -91,6 +103,7 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Una contraseña corta recibe 400")
   @DisplayName("Una contraseña corta recibe 400")
   @Description("Una contraseña de menos de 8 caracteres responde 400 con el mensaje password: La contraseña debe tener entre 8 y 72 caracteres.")
   void contrasenaCortaRecibe400() {
@@ -104,6 +117,7 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un email repetido recibe 409")
   @DisplayName("Un email repetido recibe 409")
   @Description("Registrar el mismo email por segunda vez responde 409.")
   void emailRepetidoRecibe409() {
@@ -120,6 +134,7 @@ class IdentidadTest extends GatewayTest {
         .body("message", equalTo("Ya existe un usuario con el email: " + email));
   }
 
+  @Step("Comprobar la forma del usuario")
   private static void esUsuario(Response respuesta, int estado, String email) {
     respuesta.then()
         .statusCode(estado)

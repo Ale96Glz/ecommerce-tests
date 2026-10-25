@@ -1,7 +1,11 @@
 package sdet;
 
 import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,9 +17,12 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 
+@Epic("Plataforma E-commerce")
 @Feature("Pedidos")
+@Severity(SeverityLevel.CRITICAL)
 class PedidosTest extends GatewayTest {
   @Test
+  @Story("Un pedido sin token recibe 401")
   @DisplayName("Un pedido sin token recibe 401")
   @Description("GET /api/v1/pedido sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
   void pedidoSinTokenRecibe401() {
@@ -31,6 +38,7 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un pedido con token inválido recibe 401")
   @DisplayName("Un pedido con token inválido recibe 401")
   @Description("Un Bearer inválido responde 401 con el mensaje Token inválido o expirado.")
   void pedidoConTokenInvalidoRecibe401() {
@@ -47,6 +55,7 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario no puede listar todos los pedidos")
   @DisplayName("Un usuario no puede listar todos los pedidos")
   @Description("Un USER que lista GET /api/v1/pedido responde 403 con el mensaje Se requiere rol ADMIN.")
   void usuarioNoPuedeListarTodosLosPedidos() {
@@ -71,6 +80,7 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario ve sus pedidos")
   @DisplayName("Un usuario ve sus pedidos")
   @Description("GET /api/v1/pedido/mios con token de USER responde 200 con un arreglo.")
   void usuarioVeSusPedidos() {

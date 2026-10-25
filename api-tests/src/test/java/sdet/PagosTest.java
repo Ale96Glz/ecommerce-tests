@@ -1,7 +1,11 @@
 package sdet;
 
 import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,9 +17,12 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
 
+@Epic("Plataforma E-commerce")
 @Feature("Pagos")
+@Severity(SeverityLevel.CRITICAL)
 class PagosTest extends GatewayTest {
   @Test
+  @Story("Un pago sin token recibe 401")
   @DisplayName("Un pago sin token recibe 401")
   @Description("GET /api/v1/pago sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
   void pagoSinTokenRecibe401() {
@@ -31,6 +38,7 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario ve sus pagos")
   @DisplayName("Un usuario ve sus pagos")
   @Description("GET /api/v1/pago/mios con token de USER responde 200 con un arreglo.")
   void usuarioVeSusPagos() {
@@ -53,6 +61,7 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario no puede listar todos los pagos")
   @DisplayName("Un usuario no puede listar todos los pagos")
   @Description("Un USER que lista GET /api/v1/pago responde 403 con el mensaje Se requiere rol ADMIN.")
   void usuarioNoPuedeListarTodosLosPagos() {

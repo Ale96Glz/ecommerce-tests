@@ -1,7 +1,11 @@
 package sdet;
 
 import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
+import io.qameta.allure.Severity;
+import io.qameta.allure.SeverityLevel;
+import io.qameta.allure.Story;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,9 +20,12 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
 
+@Epic("Plataforma E-commerce")
 @Feature("Catálogo")
+@Severity(SeverityLevel.NORMAL)
 class CatalogoTest extends GatewayTest {
   @Test
+  @Story("El catálogo de productos es público")
   @DisplayName("El catálogo de productos es público")
   @Description("GET /api/v1/producto responde 200 con un arreglo de id numérico y nombre.")
   void catalogoDeProductosEsPublico() {
@@ -34,6 +41,7 @@ class CatalogoTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un producto por id es público")
   @DisplayName("Un producto por id es público")
   @Description("GET /api/v1/producto/{id} sin Authorization responde 200 con id numérico y nombre.")
   void productoPorIdEsPublico() {
@@ -55,6 +63,10 @@ class CatalogoTest extends GatewayTest {
         .body("id", equalTo(id))
         .body("nombre", not(emptyOrNullString()));
   }
+
+  @Test
+  @Story("El catálogo de categorías es público")
+  @DisplayName("El catálogo de categorías es público")
   @Description("GET /api/v1/categoria responde 200 con un arreglo de id numérico y nombre.")
   void catalogoDeCategoriasEsPublico() {
     given()
@@ -69,6 +81,7 @@ class CatalogoTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario no puede crear un producto")
   @DisplayName("Un usuario no puede crear un producto")
   @Description("Un USER que crea un producto responde 403 con el mensaje Se requiere rol ADMIN.")
   void usuarioNoPuedeCrearUnProducto() {
