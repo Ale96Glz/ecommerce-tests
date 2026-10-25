@@ -31,6 +31,7 @@ mvn allure:serve
 | El inicio de sesión devuelve un token | 200, la misma forma que el registro |
 | Una contraseña incorrecta recibe 401 | `Credenciales invalidas` |
 | Un email inválido recibe 400 | `email: El email no es valido` |
+| Una contraseña corta recibe 400 | `password: La contraseña debe tener entre 8 y 72 caracteres` |
 | Un email repetido recibe 409 | `Ya existe un usuario con el email: ` más el email |
 | Un usuario no puede crear una categoría | 403, `Se requiere rol ADMIN` |
 | Un usuario no puede crear un producto | 403, `Se requiere rol ADMIN` |

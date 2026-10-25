@@ -91,6 +91,19 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @DisplayName("Una contraseña corta recibe 400")
+  @Description("Una contraseña de menos de 8 caracteres responde 400 con el mensaje password: La contraseña debe tener entre 8 y 72 caracteres.")
+  void contrasenaCortaRecibe400() {
+    postIdentidad(REGISTRO, usuario(emailNuevo(), "corta"))
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("password: La contraseña debe tener entre 8 y 72 caracteres"));
+  }
+
+  @Test
   @DisplayName("Un email repetido recibe 409")
   @Description("Registrar el mismo email por segunda vez responde 409.")
   void emailRepetidoRecibe409() {
