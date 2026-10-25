@@ -1,5 +1,6 @@
 package sdet;
 
+import io.qameta.allure.Step;
 import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -21,19 +22,24 @@ abstract class GatewayTest {
     String base = System.getenv("BASE_URL");
     RestAssured.baseURI = base == null || base.isBlank() ? "https://ecommerce.local" : base;
     RestAssured.useRelaxedHTTPSValidation();
-    RestAssured.filters(new AllureRestAssured());
+    RestAssured.filters(new AllureRestAssured()
+        .setRequestAttachmentName("Petición HTTP")
+        .setResponseAttachmentName("Respuesta HTTP"));
     RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
     listo = true;
   }
 
+  @Step("Crear un email de prueba")
   static String emailNuevo() {
     return "sdet-" + System.currentTimeMillis() + "-" + Long.toHexString(System.nanoTime()) + "@ecommerce.test";
   }
 
+  @Step("Armar el cuerpo del usuario")
   static Map<String, String> usuario(String email, String password) {
     return Map.of("nombre", "Prueba Sdet", "email", email, "password", password);
   }
 
+  @Step("Enviar la petición de identidad")
   static Response postIdentidad(String ruta, Map<String, String> cuerpo) {
     Response respuesta = null;
     for (int intento = 0; intento < 4; intento++) {
