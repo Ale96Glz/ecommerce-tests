@@ -1,6 +1,6 @@
 # Pruebas de API y de rendimiento
 
-Contrato HTTP de identidad, catálogo, pedidos y pagos. Cada test comprueba un comportamiento: el código HTTP y la forma del JSON. Las peticiones salen por `BASE_URL`. No se llama a los puertos internos de los servicios.
+Contrato HTTP de identidad, catálogo, pedidos, pagos y notificaciones. Cada test comprueba un comportamiento: el código HTTP y la forma del JSON. Las peticiones salen por `BASE_URL`. No se llama a los puertos internos de los servicios.
 
 La carga va con Gatling, en un módulo hermano. Todavía no está en esta carpeta.
 
@@ -33,10 +33,12 @@ mvn allure:serve
 | Un email inválido recibe 400 | `email: El email no es valido` |
 | Un email repetido recibe 409 | `Ya existe un usuario con el email: ` más el email |
 | Un usuario no puede crear una categoría | 403, `Se requiere rol ADMIN` |
+| Un usuario no puede crear un producto | 403, `Se requiere rol ADMIN` |
 | El catálogo de productos es público | 200, arreglo con `id` numérico y `nombre` |
 | El catálogo de categorías es público | 200, arreglo con `id` numérico y `nombre` |
 | Un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un pago sin token recibe 401 | `Falta el header Authorization Bearer` |
+| Una notificación sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un pedido con token inválido recibe 401 | `Token inválido o expirado` |
 
 Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la contraseña `Passw0rd!123`.
