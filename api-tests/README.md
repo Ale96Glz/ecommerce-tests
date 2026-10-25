@@ -36,6 +36,7 @@ mvn allure:serve
 | Un usuario no puede crear una categoría | 403, `Se requiere rol ADMIN` |
 | Un usuario no puede crear un producto | 403, `Se requiere rol ADMIN` |
 | El catálogo de productos es público | 200, arreglo con `id` numérico y `nombre` |
+| Un producto por id es público | 200, `id` numérico y `nombre` |
 | El catálogo de categorías es público | 200, arreglo con `id` numérico y `nombre` |
 | Un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un pago sin token recibe 401 | `Falta el header Authorization Bearer` |

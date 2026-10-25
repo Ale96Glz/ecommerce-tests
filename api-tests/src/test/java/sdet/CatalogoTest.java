@@ -34,7 +34,27 @@ class CatalogoTest extends GatewayTest {
   }
 
   @Test
-  @DisplayName("El catálogo de categorías es público")
+  @DisplayName("Un producto por id es público")
+  @Description("GET /api/v1/producto/{id} sin Authorization responde 200 con id numérico y nombre.")
+  void productoPorIdEsPublico() {
+    Number id = given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("[0].id");
+
+    given()
+        .when()
+        .get("/api/v1/producto/" + id)
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", instanceOf(Number.class))
+        .body("id", equalTo(id))
+        .body("nombre", not(emptyOrNullString()));
+  }
   @Description("GET /api/v1/categoria responde 200 con un arreglo de id numérico y nombre.")
   void catalogoDeCategoriasEsPublico() {
     given()
