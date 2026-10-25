@@ -5,11 +5,13 @@ import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.instanceOf;
 
 @Feature("Pedidos")
 class PedidosTest extends GatewayTest {
@@ -66,5 +68,27 @@ class PedidosTest extends GatewayTest {
         .body("status", equalTo(403))
         .body("error", equalTo("Forbidden"))
         .body("message", equalTo("Se requiere rol ADMIN"));
+  }
+
+  @Test
+  @DisplayName("Un usuario ve sus pedidos")
+  @Description("GET /api/v1/pedido/mios con token de USER responde 200 con un arreglo.")
+  void usuarioVeSusPedidos() {
+    String email = emailNuevo();
+    postIdentidad(REGISTRO, usuario(email, CONTRASENA)).then().statusCode(201);
+    String token = postIdentidad(LOGIN, Map.of("email", email, "password", CONTRASENA))
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("token");
+
+    given()
+        .header("Authorization", "Bearer " + token)
+        .when()
+        .get("/api/v1/pedido/mios")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("", instanceOf(List.class));
   }
 }
