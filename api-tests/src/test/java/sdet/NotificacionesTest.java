@@ -59,4 +59,208 @@ class NotificacionesTest extends GatewayTest {
         .contentType(containsString("json"))
         .body("", instanceOf(List.class));
   }
+
+  @Test
+  @Story("Un usuario no puede listar todas las notificaciones")
+  @DisplayName("Un usuario no puede listar todas las notificaciones")
+  @Description("Un USER que lista GET /api/v1/notificacion responde 403 con el mensaje Se requiere rol ADMIN.")
+  void usuarioNoPuedeListarTodasLasNotificaciones() {
+    soloAdmin(given().header("Authorization", "Bearer " + sesionNueva().token()).when().get("/api/v1/notificacion"));
+  }
+
+  @Test
+  @Story("Un usuario no puede paginar las notificaciones")
+  @DisplayName("Un usuario no puede paginar las notificaciones")
+  @Description("Un USER que lista GET /api/v1/notificacion/pageable responde 403 con el mensaje Se requiere rol ADMIN.")
+  void usuarioNoPuedePaginarLasNotificaciones() {
+    soloAdmin(given().header("Authorization", "Bearer " + sesionNueva().token()).when().get("/api/v1/notificacion/pageable"));
+  }
+
+  @Test
+  @Story("Listar notificaciones sin token recibe 401")
+  @DisplayName("Listar notificaciones sin token recibe 401")
+  @Description("GET /api/v1/notificacion sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void listarNotificacionesSinTokenRecibe401() {
+    sinBearer(given().when().get("/api/v1/notificacion"));
+  }
+
+  @Test
+  @Story("Paginar notificaciones sin token recibe 401")
+  @DisplayName("Paginar notificaciones sin token recibe 401")
+  @Description("GET /api/v1/notificacion/pageable sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void paginarNotificacionesSinTokenRecibe401() {
+    sinBearer(given().when().get("/api/v1/notificacion/pageable"));
+  }
+
+  @Test
+  @Story("Una notificación inexistente recibe 404")
+  @DisplayName("Una notificación inexistente recibe 404")
+  @Description("GET /api/v1/notificacion/{id} de un id ausente responde 404 con el mensaje No se encontró la notificación con id.")
+  void notificacionInexistenteRecibe404() {
+    noEncontrado(
+        given().header("Authorization", "Bearer " + sesionNueva().token()).when().get("/api/v1/notificacion/" + AJENO),
+        "No se encontró la notificación con id: " + AJENO);
+  }
+
+  @Test
+  @Story("Una notificación por id sin token recibe 401")
+  @DisplayName("Una notificación por id sin token recibe 401")
+  @Description("GET /api/v1/notificacion/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void notificacionPorIdSinTokenRecibe401() {
+    sinBearer(given().when().get("/api/v1/notificacion/" + AJENO));
+  }
+
+  @Test
+  @Story("Un usuario ve las notificaciones de su id")
+  @DisplayName("Un usuario ve las notificaciones de su id")
+  @Description("GET /api/v1/notificacion/usuario/{id} con el token de ese usuario responde 200 con un arreglo.")
+  void usuarioVeLasNotificacionesDeSuId() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/notificacion/usuario/" + sesion.id())
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("", instanceOf(List.class));
+  }
+
+  @Test
+  @Story("Un usuario no puede ver las notificaciones de otro")
+  @DisplayName("Un usuario no puede ver las notificaciones de otro")
+  @Description("GET /api/v1/notificacion/usuario/{id} de otro id responde 403 con el mensaje No puedes acceder a recursos de otro usuario.")
+  void usuarioNoPuedeVerLasNotificacionesDeOtro() {
+    recursoAjeno(given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .when()
+        .get("/api/v1/notificacion/usuario/" + AJENO));
+  }
+
+  @Test
+  @Story("Un usuario ve sus notificaciones no leídas")
+  @DisplayName("Un usuario ve sus notificaciones no leídas")
+  @Description("GET /api/v1/notificacion/usuario/{id}/no-leidas con el token de ese usuario responde 200 con un arreglo.")
+  void usuarioVeSusNotificacionesNoLeidas() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/notificacion/usuario/" + sesion.id() + "/no-leidas")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("", instanceOf(List.class));
+  }
+
+  @Test
+  @Story("Un usuario no puede ver las no leídas de otro")
+  @DisplayName("Un usuario no puede ver las no leídas de otro")
+  @Description("GET /api/v1/notificacion/usuario/{id}/no-leidas de otro id responde 403 con el mensaje No puedes acceder a recursos de otro usuario.")
+  void usuarioNoPuedeVerLasNoLeidasDeOtro() {
+    recursoAjeno(given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .when()
+        .get("/api/v1/notificacion/usuario/" + AJENO + "/no-leidas"));
+  }
+
+  @Test
+  @Story("Marcar una notificación inexistente recibe 404")
+  @DisplayName("Marcar una notificación inexistente recibe 404")
+  @Description("PATCH /api/v1/notificacion/{id}/leida de un id ausente responde 404 con el mensaje No se encontró la notificación con id.")
+  void marcarNotificacionInexistenteRecibe404() {
+    noEncontrado(
+        given().header("Authorization", "Bearer " + sesionNueva().token()).when().patch("/api/v1/notificacion/" + AJENO + "/leida"),
+        "No se encontró la notificación con id: " + AJENO);
+  }
+
+  @Test
+  @Story("Marcar una notificación sin token recibe 401")
+  @DisplayName("Marcar una notificación sin token recibe 401")
+  @Description("PATCH /api/v1/notificacion/{id}/leida sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void marcarNotificacionSinTokenRecibe401() {
+    sinBearer(given().when().patch("/api/v1/notificacion/" + AJENO + "/leida"));
+  }
+
+  @Test
+  @Story("Crear una notificación sin token recibe 401")
+  @DisplayName("Crear una notificación sin token recibe 401")
+  @Description("POST /api/v1/notificacion sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void crearNotificacionSinTokenRecibe401() {
+    sinBearer(given().contentType("application/json").body(aviso()).when().post("/api/v1/notificacion"));
+  }
+
+  @Test
+  @Story("Un tipo de notificación inválido recibe 400")
+  @DisplayName("Un tipo de notificación inválido recibe 400")
+  @Description("Un tipo desconocido responde 400 con el mensaje Tipo de notificación inválido.")
+  void tipoDeNotificacionInvalidoRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("tipo", "NO-ES", "mensaje", "Prueba", "referenciaId", 1))
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("Tipo de notificación inválido: NO-ES"));
+  }
+
+  @Test
+  @Story("Un usuario crea su notificación")
+  @DisplayName("Un usuario crea su notificación")
+  @Description("POST /api/v1/notificacion responde 201 con el tipo, el mensaje, la referencia y leida en falso.")
+  void usuarioCreaSuNotificacion() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(aviso())
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(201)
+        .contentType(containsString("json"))
+        .body("usuarioId", equalTo(sesion.id()))
+        .body("tipo", equalTo("PEDIDO_CREADO"))
+        .body("mensaje", equalTo("Prueba Sdet"))
+        .body("referenciaId", equalTo(1))
+        .body("leida", equalTo(false))
+        .body("id", instanceOf(Number.class));
+  }
+
+  @Test
+  @Story("Un usuario marca su notificación como leída")
+  @DisplayName("Un usuario marca su notificación como leída")
+  @Description("PATCH /api/v1/notificacion/{id}/leida responde 200 y leida en verdadero.")
+  void usuarioMarcaSuNotificacionComoLeida() {
+    Sesion sesion = sesionNueva();
+    Number id = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(aviso())
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(201)
+        .extract()
+        .path("id");
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .patch("/api/v1/notificacion/" + id + "/leida")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", equalTo(id))
+        .body("leida", equalTo(true));
+  }
+
+  private static Map<String, Object> aviso() {
+    return Map.of("tipo", "PEDIDO_CREADO", "mensaje", "Prueba Sdet", "referenciaId", 1);
+  }
 }
