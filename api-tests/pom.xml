@@ -11,6 +11,7 @@
     <maven.compiler.release>21</maven.compiler.release>
     <allure.version>2.29.1</allure.version>
     <allure.report.version>2.29.0</allure.report.version>
+    <aspectj.version>1.9.26</aspectj.version>
   </properties>
   <dependencies>
     <dependency>
@@ -55,6 +56,12 @@
       <version>5.11.4</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjweaver</artifactId>
+      <version>${aspectj.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -66,6 +73,7 @@
           <testFailureIgnore>true</testFailureIgnore>
           <forkCount>1</forkCount>
           <reuseForks>true</reuseForks>
+          <argLine>-javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"</argLine>
           <systemPropertyVariables>
             <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
           </systemPropertyVariables>
@@ -107,6 +115,25 @@
                 <delete dir="${project.build.directory}/surefire-reports" quiet="true"/>
                 <mkdir dir="${project.build.directory}/allure-results/history"/>
                 <copy file="${project.basedir}/src/test/resources/categories.json" todir="${project.build.directory}/allure-results"/>
+                <copy file="${project.basedir}/src/test/resources/executor.json" todir="${project.build.directory}/allure-results"/>
+                <property environment="env"/>
+                <tstamp>
+                  <format property="fecha.ejecucion" pattern="yyyy-MM-dd HH:mm"/>
+                </tstamp>
+                <condition property="url.base" value="${env.BASE_URL}" else="https://ecommerce.local">
+                  <and>
+                    <isset property="env.BASE_URL"/>
+                    <length string="${env.BASE_URL}" when="greater" length="0"/>
+                  </and>
+                </condition>
+                <echo file="${project.build.directory}/allure-results/environment.properties" encoding="UTF-8">Ambiente=local
+URL.Base=${url.base}
+Framework=REST Assured
+Java.proyecto=21
+Java.ejecucion=${java.version}
+Fecha=${fecha.ejecucion}
+Usuario=${user.name}
+</echo>
                 <copy todir="${project.build.directory}/allure-results/history" failonerror="false">
                   <fileset dir="${project.basedir}/allure-history" erroronmissingdir="false" includes="**/*"/>
                 </copy>

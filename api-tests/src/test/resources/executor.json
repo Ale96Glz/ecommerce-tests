@@ -1,0 +1,6 @@
+{
+  "name": "local",
+  "type": "maven",
+  "buildName": "rest-assured",
+  "reportName": "Pruebas de API"
+}

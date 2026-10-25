@@ -1,13 +1,27 @@
 [
   {
+    "name": "Omitidos",
+    "matchedStatuses": ["skipped"]
+  },
+  {
+    "name": "Timeout",
+    "matchedStatuses": ["broken", "failed"],
+    "traceRegex": ".*(SocketTimeoutException|ConnectTimeoutException|TimeoutException).*"
+  },
+  {
     "name": "Gateway caído",
     "matchedStatuses": ["broken"],
     "traceRegex": ".*(ConnectException|UnknownHostException|SSLHandshakeException).*"
   },
   {
-    "name": "Respuesta inesperada",
+    "name": "Error del servidor",
     "matchedStatuses": ["failed"],
-    "messageRegex": ".*Expected status code.*"
+    "messageRegex": ".*Expected status code <5[0-9][0-9]>.*"
+  },
+  {
+    "name": "Autenticación",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*Expected status code <40[13]>.*"
   },
   {
     "name": "Aserción",
