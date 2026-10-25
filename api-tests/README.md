@@ -44,6 +44,7 @@ mvn allure:serve
 | Un usuario no puede listar todos los pedidos | 403, `Se requiere rol ADMIN` |
 | Un usuario ve sus pedidos | 200, arreglo |
 | Un usuario ve sus pagos | 200, arreglo |
+| Un usuario no puede listar todos los pagos | 403, `Se requiere rol ADMIN` |
 | Un usuario ve sus notificaciones | 200, arreglo |
 
 Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la contraseña `Passw0rd!123`.

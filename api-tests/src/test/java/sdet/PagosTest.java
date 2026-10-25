@@ -51,4 +51,28 @@ class PagosTest extends GatewayTest {
         .contentType(containsString("json"))
         .body("", instanceOf(List.class));
   }
+
+  @Test
+  @DisplayName("Un usuario no puede listar todos los pagos")
+  @Description("Un USER que lista GET /api/v1/pago responde 403 con el mensaje Se requiere rol ADMIN.")
+  void usuarioNoPuedeListarTodosLosPagos() {
+    String email = emailNuevo();
+    postIdentidad(REGISTRO, usuario(email, CONTRASENA)).then().statusCode(201);
+    String token = postIdentidad(LOGIN, Map.of("email", email, "password", CONTRASENA))
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("token");
+
+    given()
+        .header("Authorization", "Bearer " + token)
+        .when()
+        .get("/api/v1/pago")
+        .then()
+        .statusCode(403)
+        .contentType(containsString("json"))
+        .body("status", equalTo(403))
+        .body("error", equalTo("Forbidden"))
+        .body("message", equalTo("Se requiere rol ADMIN"));
+  }
 }
