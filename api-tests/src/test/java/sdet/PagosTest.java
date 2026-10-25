@@ -84,4 +84,112 @@ class PagosTest extends GatewayTest {
         .body("error", equalTo("Forbidden"))
         .body("message", equalTo("Se requiere rol ADMIN"));
   }
+
+  @Test
+  @Story("Un usuario no puede paginar los pagos")
+  @DisplayName("Un usuario no puede paginar los pagos")
+  @Description("Un USER que lista GET /api/v1/pago/pageable responde 403 con el mensaje Se requiere rol ADMIN.")
+  void usuarioNoPuedePaginarLosPagos() {
+    soloAdmin(given().header("Authorization", "Bearer " + sesionNueva().token()).when().get("/api/v1/pago/pageable"));
+  }
+
+  @Test
+  @Story("Paginar pagos sin token recibe 401")
+  @DisplayName("Paginar pagos sin token recibe 401")
+  @Description("GET /api/v1/pago/pageable sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void paginarPagosSinTokenRecibe401() {
+    sinBearer(given().when().get("/api/v1/pago/pageable"));
+  }
+
+  @Test
+  @Story("Los pagos del usuario sin token reciben 401")
+  @DisplayName("Los pagos del usuario sin token reciben 401")
+  @Description("GET /api/v1/pago/mios sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void pagosDelUsuarioSinTokenReciben401() {
+    sinBearer(given().when().get("/api/v1/pago/mios"));
+  }
+
+  @Test
+  @Story("Un pago por id sin token recibe 401")
+  @DisplayName("Un pago por id sin token recibe 401")
+  @Description("GET /api/v1/pago/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void pagoPorIdSinTokenRecibe401() {
+    sinBearer(given().when().get("/api/v1/pago/" + AJENO));
+  }
+
+  @Test
+  @Story("Un pago inexistente recibe 404")
+  @DisplayName("Un pago inexistente recibe 404")
+  @Description("GET /api/v1/pago/{id} de un id ausente responde 404 con el mensaje No se encontró el pago con id.")
+  void pagoInexistenteRecibe404() {
+    noEncontrado(
+        given().header("Authorization", "Bearer " + sesionNueva().token()).when().get("/api/v1/pago/" + AJENO),
+        "No se encontró el pago con id: " + AJENO);
+  }
+
+  @Test
+  @Story("Un pedido sin pago recibe 404")
+  @DisplayName("Un pedido sin pago recibe 404")
+  @Description("GET /api/v1/pago/pedido/{id} de un pedido sin pago responde 404 con el mensaje No se encontró pago para el pedido con id.")
+  void pedidoSinPagoRecibe404() {
+    noEncontrado(
+        given().header("Authorization", "Bearer " + sesionNueva().token()).when().get("/api/v1/pago/pedido/" + AJENO),
+        "No se encontró pago para el pedido con id: " + AJENO);
+  }
+
+  @Test
+  @Story("Un usuario ve los pagos de su id")
+  @DisplayName("Un usuario ve los pagos de su id")
+  @Description("GET /api/v1/pago/usuario/{id} con el token de ese usuario responde 200 con un arreglo.")
+  void usuarioVeLosPagosDeSuId() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/pago/usuario/" + sesion.id())
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("", instanceOf(List.class));
+  }
+
+  @Test
+  @Story("Un usuario no puede ver los pagos de otro")
+  @DisplayName("Un usuario no puede ver los pagos de otro")
+  @Description("GET /api/v1/pago/usuario/{id} de otro id responde 403 con el mensaje No puedes acceder a recursos de otro usuario.")
+  void usuarioNoPuedeVerLosPagosDeOtro() {
+    recursoAjeno(given().header("Authorization", "Bearer " + sesionNueva().token()).when().get("/api/v1/pago/usuario/" + AJENO));
+  }
+
+  @Test
+  @Story("Crear un pago sin token recibe 401")
+  @DisplayName("Crear un pago sin token recibe 401")
+  @Description("POST /api/v1/pago sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void crearPagoSinTokenRecibe401() {
+    sinBearer(given().contentType("application/json").body(Map.of("pedidoId", 1, "monto", 10.0)).when().post("/api/v1/pago"));
+  }
+
+  @Test
+  @Story("Los pagos de un usuario sin token reciben 401")
+  @DisplayName("Los pagos de un usuario sin token reciben 401")
+  @Description("GET /api/v1/pago/usuario/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void pagosDeUnUsuarioSinTokenReciben401() {
+    sinBearer(given().when().get("/api/v1/pago/usuario/" + AJENO));
+  }
+
+  @Test
+  @Story("El pago de un pedido sin token recibe 401")
+  @DisplayName("El pago de un pedido sin token recibe 401")
+  @Description("GET /api/v1/pago/pedido/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void pagoDeUnPedidoSinTokenRecibe401() {
+    sinBearer(given().when().get("/api/v1/pago/pedido/" + AJENO));
+  }
+
+  @Test
+  @Story("Los pagos del usuario con token inválido reciben 401")
+  @DisplayName("Los pagos del usuario con token inválido reciben 401")
+  @Description("GET /api/v1/pago/mios con un Bearer inválido responde 401 con el mensaje Token inválido o expirado.")
+  void pagosDelUsuarioConTokenInvalidoReciben401() {
+    bearerInvalido(given().header("Authorization", "Bearer token-falso").when().get("/api/v1/pago/mios"));
+  }
 }
