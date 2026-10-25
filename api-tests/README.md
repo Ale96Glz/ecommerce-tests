@@ -40,5 +40,6 @@ mvn allure:serve
 | Un pago sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Una notificación sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un pedido con token inválido recibe 401 | `Token inválido o expirado` |
+| Un usuario no puede listar todos los pedidos | 403, `Se requiere rol ADMIN` |
 
 Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la contraseña `Passw0rd!123`.
