@@ -44,4 +44,18 @@ class GatewayHealthTest extends GatewayTest {
         .contentType(containsString("json"))
         .body("status", equalTo("UP"));
   }
+
+  @Test
+  @Story("El gateway responde readiness")
+  @DisplayName("El gateway responde readiness")
+  @Description("GET /actuator/health/readiness responde 200 y status UP.")
+  void gatewayRespondeReadiness() {
+    given()
+        .when()
+        .get("/actuator/health/readiness")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("status", equalTo("UP"));
+  }
 }

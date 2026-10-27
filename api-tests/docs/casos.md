@@ -10,6 +10,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 |---|---|
 | El gateway responde health | 200, `status` UP |
 | El gateway responde liveness | 200, `status` UP |
+| El gateway responde readiness | 200, `status` UP |
 
 ## Identidad
 
