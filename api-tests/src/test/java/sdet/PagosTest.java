@@ -192,4 +192,27 @@ class PagosTest extends GatewayTest {
   void pagosDelUsuarioConTokenInvalidoReciben401() {
     bearerInvalido(given().header("Authorization", "Bearer token-falso").when().get("/api/v1/pago/mios"));
   }
+
+  @Test
+  @Story("Pagar un pedido inexistente recibe 404")
+  @DisplayName("Pagar un pedido inexistente recibe 404")
+  @Description("POST /api/v1/pago de un pedido ausente responde 404 con el mensaje No se encontró el pedido con id.")
+  void pagarPedidoInexistenteRecibe404() {
+    noEncontrado(
+        given()
+            .header("Authorization", "Bearer " + sesionNueva().token())
+            .contentType("application/json")
+            .body(Map.of("pedidoId", Long.parseLong(AJENO), "monto", 10.0))
+            .when()
+            .post("/api/v1/pago"),
+        "No se encontró el pedido con id: " + AJENO);
+  }
+
+  @Test
+  @Story("Un pago por id con token inválido recibe 401")
+  @DisplayName("Un pago por id con token inválido recibe 401")
+  @Description("GET /api/v1/pago/{id} con un Bearer inválido responde 401 con el mensaje Token inválido o expirado.")
+  void pagoPorIdConTokenInvalidoRecibe401() {
+    bearerInvalido(given().header("Authorization", "Bearer token-falso").when().get("/api/v1/pago/" + AJENO));
+  }
 }

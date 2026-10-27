@@ -42,6 +42,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Editar el perfil con un nombre corto recibe 400 | `nombre: El nombre debe tener entre 2 y 100 caracteres` |
 | Editar el perfil con un email inválido recibe 400 | `email: El email no es valido` |
 | Editar el perfil con un email repetido recibe 409 | `Ya existe un usuario con el email: ` más el email |
+| Un usuario cambia su email | 200, el email nuevo |
+| Editar el perfil sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un usuario comprueba que existe | 200, id y rol USER |
 | Un usuario inexistente recibe 404 | `No existe un usuario válido con id` |
 | Un usuario no puede cambiar un rol | 403, `Se requiere rol ADMIN` |
@@ -116,6 +118,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Los pagos de un usuario sin token reciben 401 | `Falta el header Authorization Bearer` |
 | El pago de un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Los pagos del usuario con token inválido reciben 401 | `Token inválido o expirado` |
+| Pagar un pedido inexistente recibe 404 | `No se encontró el pedido con id` |
+| Un pago por id con token inválido recibe 401 | `Token inválido o expirado` |
 
 ## Notificaciones
 

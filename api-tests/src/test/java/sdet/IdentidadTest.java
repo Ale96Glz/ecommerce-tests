@@ -395,6 +395,40 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario cambia su email")
+  @DisplayName("Un usuario cambia su email")
+  @Description("PUT /api/v1/usuario/{id} con un email nuevo responde 200 con ese email.")
+  void usuarioCambiaSuEmail() {
+    Sesion sesion = sesionNueva();
+    String email = emailNuevo();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", "Prueba Sdet", "email", email))
+        .when()
+        .put("/api/v1/usuario/" + sesion.id())
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", equalTo(sesion.id()))
+        .body("nombre", equalTo("Prueba Sdet"))
+        .body("email", equalTo(email))
+        .body("rol", equalTo("USER"));
+  }
+
+  @Test
+  @Story("Editar el perfil sin token recibe 401")
+  @DisplayName("Editar el perfil sin token recibe 401")
+  @Description("PUT /api/v1/usuario/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void editarPerfilSinTokenRecibe401() {
+    sinBearer(given()
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", "Prueba Sdet", "email", emailNuevo()))
+        .when()
+        .put("/api/v1/usuario/" + AJENO));
+  }
+
+  @Test
   @Story("Un usuario comprueba que existe")
   @DisplayName("Un usuario comprueba que existe")
   @Description("GET /api/v1/usuario/existe/{id} responde 200 con el id y el rol USER.")
