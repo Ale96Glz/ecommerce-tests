@@ -6,6 +6,7 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
+import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -214,5 +215,86 @@ class PagosTest extends GatewayTest {
   @Description("GET /api/v1/pago/{id} con un Bearer inválido responde 401 con el mensaje Token inválido o expirado.")
   void pagoPorIdConTokenInvalidoRecibe401() {
     bearerInvalido(given().header("Authorization", "Bearer token-falso").when().get("/api/v1/pago/" + AJENO));
+  }
+
+  @Test
+  @Story("Pagar el pedido de otro usuario recibe 403")
+  @DisplayName("Pagar el pedido de otro usuario recibe 403")
+  @Description("POST /api/v1/pago del pedido de otro usuario responde 403 con el mensaje El pedido no pertenece al usuario autenticado.")
+  void pagarElPedidoDeOtroUsuarioRecibe403() {
+    Sesion dueno = sesionNueva();
+    Sesion ajeno = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(dueno, productoId);
+      given()
+          .header("Authorization", "Bearer " + ajeno.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(403)
+          .contentType(containsString("json"))
+          .body("status", equalTo(403))
+          .body("error", equalTo("Forbidden"))
+          .body("message", equalTo("El pedido con id " + pedidoId + " no pertenece al usuario autenticado"));
+    } finally {
+      devolverPedido(dueno, pedidoId, productoId);
+    }
+  }
+
+  private static Number productoConStock() {
+    List<Map<String, Object>> productos = given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      if (stock >= 1 && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        return (Number) producto.get("id");
+      }
+    }
+    throw new IllegalStateException("No hay un producto con stock");
+  }
+
+  private static Number crearPedido(Sesion sesion, Number productoId) {
+    return given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
+        .when()
+        .post("/api/v1/pedido")
+        .then()
+        .statusCode(201)
+        .extract()
+        .path("id");
+  }
+
+  private static void devolverPedido(Sesion sesion, Number pedidoId, Number productoId) {
+    if (pedidoId == null) {
+      return;
+    }
+    Response respuesta = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar");
+    if (respuesta.statusCode() == 200) {
+      return;
+    }
+    String mensaje = respuesta.path("message");
+    if (mensaje != null && mensaje.contains("PAGADO")) {
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .put("/api/v1/producto/" + productoId + "/stock/reponer?cantidad=1")
+          .then()
+          .statusCode(200);
+    }
   }
 }

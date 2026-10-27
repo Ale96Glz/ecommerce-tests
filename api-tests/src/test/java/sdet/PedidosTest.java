@@ -6,6 +6,7 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
+import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -234,5 +235,184 @@ class PedidosTest extends GatewayTest {
   @Description("GET /api/v1/pedido/{id} con un Bearer inválido responde 401 con el mensaje Token inválido o expirado.")
   void pedidoPorIdConTokenInvalidoRecibe401() {
     bearerInvalido(given().header("Authorization", "Bearer token-falso").when().get("/api/v1/pedido/" + AJENO));
+  }
+
+  @Test
+  @Story("Crear un pedido descuenta el stock")
+  @DisplayName("Crear un pedido descuenta el stock")
+  @Description("POST /api/v1/pedido responde 201 con estado CREADO y el stock del producto baja una unidad.")
+  void crearUnPedidoDescuentaElStock() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    int antes = stockDe(productoId);
+    Number pedidoId = null;
+    try {
+      pedidoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
+          .when()
+          .post("/api/v1/pedido")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("id", instanceOf(Number.class))
+          .body("usuarioId", equalTo(sesion.id()))
+          .body("estado", equalTo("CREADO"))
+          .body("items[0].cantidad", equalTo(1))
+          .extract()
+          .path("id");
+
+      given()
+          .when()
+          .get("/api/v1/producto/" + productoId)
+          .then()
+          .statusCode(200)
+          .body("stock", equalTo(antes - 1));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Un usuario ve su pedido por id")
+  @DisplayName("Un usuario ve su pedido por id")
+  @Description("GET /api/v1/pedido/{id} con el token del dueño responde 200 con estado CREADO.")
+  void usuarioVeSuPedidoPorId() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", equalTo(pedidoId))
+          .body("usuarioId", equalTo(sesion.id()))
+          .body("estado", equalTo("CREADO"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Un usuario no puede ver un pedido ajeno")
+  @DisplayName("Un usuario no puede ver un pedido ajeno")
+  @Description("GET /api/v1/pedido/{id} de otro usuario responde 403 con el mensaje No puedes acceder a recursos de otro usuario.")
+  void usuarioNoPuedeVerUnPedidoAjeno() {
+    Sesion dueno = sesionNueva();
+    Sesion ajeno = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(dueno, productoId);
+      recursoAjeno(given()
+          .header("Authorization", "Bearer " + ajeno.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId));
+    } finally {
+      devolverPedido(dueno, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Cancelar un pedido creado repone el stock")
+  @DisplayName("Cancelar un pedido creado repone el stock")
+  @Description("PUT /api/v1/pedido/{id}/cancelar responde 200 con estado CANCELADO y el stock vuelve a la unidad descontada.")
+  void cancelarUnPedidoCreadoReponeElStock() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    int antes = stockDe(productoId);
+    Number pedidoId = crearPedido(sesion, productoId);
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", equalTo(pedidoId))
+        .body("estado", equalTo("CANCELADO"))
+        .body("motivoCancelacion", equalTo("USUARIO"));
+
+    int stock = antes - 1;
+    for (int intento = 0; intento < 20 && stock != antes; intento++) {
+      Thread.sleep(1000);
+      stock = stockDe(productoId);
+    }
+    given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .body("stock", equalTo(antes));
+  }
+
+  private static Number productoConStock() {
+    List<Map<String, Object>> productos = given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      if (stock >= 1 && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        return (Number) producto.get("id");
+      }
+    }
+    throw new IllegalStateException("No hay un producto con stock");
+  }
+
+  private static int stockDe(Number productoId) {
+    return given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("stock");
+  }
+
+  private static Number crearPedido(Sesion sesion, Number productoId) {
+    return given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
+        .when()
+        .post("/api/v1/pedido")
+        .then()
+        .statusCode(201)
+        .extract()
+        .path("id");
+  }
+
+  private static void devolverPedido(Sesion sesion, Number pedidoId, Number productoId) {
+    if (pedidoId == null) {
+      return;
+    }
+    Response respuesta = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar");
+    if (respuesta.statusCode() == 200) {
+      return;
+    }
+    String mensaje = respuesta.path("message");
+    if (mensaje != null && mensaje.contains("PAGADO")) {
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .put("/api/v1/producto/" + productoId + "/stock/reponer?cantidad=1")
+          .then()
+          .statusCode(200);
+    }
   }
 }

@@ -98,6 +98,10 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Los pedidos de un usuario sin token reciben 401 | `Falta el header Authorization Bearer` |
 | Los pedidos del usuario con token inválido reciben 401 | `Token inválido o expirado` |
 | Un pedido por id con token inválido recibe 401 | `Token inválido o expirado` |
+| Crear un pedido descuenta el stock | 201, estado `CREADO` y el stock baja una unidad |
+| Un usuario ve su pedido por id | 200, estado `CREADO` |
+| Un usuario no puede ver un pedido ajeno | 403, `No puedes acceder a recursos de otro usuario` |
+| Cancelar un pedido creado repone el stock | 200, estado `CANCELADO` y el stock vuelve |
 
 ## Pagos
 
@@ -120,6 +124,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Los pagos del usuario con token inválido reciben 401 | `Token inválido o expirado` |
 | Pagar un pedido inexistente recibe 404 | `No se encontró el pedido con id` |
 | Un pago por id con token inválido recibe 401 | `Token inválido o expirado` |
+| Pagar el pedido de otro usuario recibe 403 | `El pedido con id` no pertenece al usuario autenticado |
 
 ## Notificaciones
 
