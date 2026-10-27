@@ -15,7 +15,9 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
 
 @Epic("Plataforma E-commerce")
 @Feature("Notificaciones")
@@ -326,7 +328,117 @@ class NotificacionesTest extends GatewayTest {
     bearerInvalido(given().header("Authorization", "Bearer token-falso").when().get("/api/v1/notificacion/mias"));
   }
 
+  @Test
+  @Story("Un usuario ve su notificación por id")
+  @DisplayName("Un usuario ve su notificación por id")
+  @Description("GET /api/v1/notificacion/{id} con el token del dueño responde 200 con el tipo y leida en falso.")
+  void usuarioVeSuNotificacionPorId() {
+    Sesion sesion = sesionNueva();
+    Number id = crearAviso(sesion);
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/notificacion/" + id)
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", equalTo(id))
+        .body("usuarioId", equalTo(sesion.id()))
+        .body("tipo", equalTo("PEDIDO_CREADO"))
+        .body("mensaje", equalTo("Prueba Sdet"))
+        .body("leida", equalTo(false));
+  }
+
+  @Test
+  @Story("Un usuario no puede ver la notificación de otro")
+  @DisplayName("Un usuario no puede ver la notificación de otro")
+  @Description("GET /api/v1/notificacion/{id} de otro usuario responde 403 con el mensaje No puedes acceder a recursos de otro usuario.")
+  void usuarioNoPuedeVerLaNotificacionDeOtro() {
+    Number id = crearAviso(sesionNueva());
+    recursoAjeno(given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .when()
+        .get("/api/v1/notificacion/" + id));
+  }
+
+  @Test
+  @Story("Un usuario no puede marcar la notificación de otro")
+  @DisplayName("Un usuario no puede marcar la notificación de otro")
+  @Description("PATCH /api/v1/notificacion/{id}/leida de otro usuario responde 403 y la notificación sigue sin leerse.")
+  void usuarioNoPuedeMarcarLaNotificacionDeOtro() {
+    Sesion dueno = sesionNueva();
+    Number id = crearAviso(dueno);
+    recursoAjeno(given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .when()
+        .patch("/api/v1/notificacion/" + id + "/leida"));
+
+    given()
+        .header("Authorization", "Bearer " + dueno.token())
+        .when()
+        .get("/api/v1/notificacion/" + id)
+        .then()
+        .statusCode(200)
+        .body("leida", equalTo(false));
+  }
+
+  @Test
+  @Story("La notificación creada aparece en no leídas")
+  @DisplayName("La notificación creada aparece en no leídas")
+  @Description("GET /api/v1/notificacion/usuario/{id}/no-leidas incluye la notificación recién creada.")
+  void notificacionCreadaApareceEnNoLeidas() {
+    Sesion sesion = sesionNueva();
+    Number id = crearAviso(sesion);
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/notificacion/usuario/" + sesion.id() + "/no-leidas")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", hasItem(id));
+  }
+
+  @Test
+  @Story("La notificación leída sale de no leídas")
+  @DisplayName("La notificación leída sale de no leídas")
+  @Description("Tras marcarla leída, GET /api/v1/notificacion/usuario/{id}/no-leidas ya no incluye esa notificación.")
+  void notificacionLeidaSaleDeNoLeidas() {
+    Sesion sesion = sesionNueva();
+    Number id = crearAviso(sesion);
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .patch("/api/v1/notificacion/" + id + "/leida")
+        .then()
+        .statusCode(200);
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/notificacion/usuario/" + sesion.id() + "/no-leidas")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", not(hasItem(id)));
+  }
+
   private static Map<String, Object> aviso() {
     return Map.of("tipo", "PEDIDO_CREADO", "mensaje", "Prueba Sdet", "referenciaId", 1);
+  }
+
+  private static Number crearAviso(Sesion sesion) {
+    return given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(aviso())
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(201)
+        .extract()
+        .path("id");
   }
 }

@@ -142,3 +142,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario crea un aviso de pago procesado | 201, tipo `PAGO_PROCESADO` y `leida` falso |
 | Un usuario vuelve a marcar su notificación leída | 200, `leida` sigue verdadero |
 | Notificaciones propias con token inválido reciben 401 | `Token inválido o expirado` |
+| Un usuario ve su notificación por id | 200, tipo y `leida` falso |
+| Un usuario no puede ver la notificación de otro | 403, `No puedes acceder a recursos de otro usuario` |
+| Un usuario no puede marcar la notificación de otro | 403 y sigue sin leerse |
+| La notificación creada aparece en no leídas | 200, el id está en el arreglo |
+| La notificación leída sale de no leídas | 200, el id ya no está |
