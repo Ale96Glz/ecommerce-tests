@@ -103,6 +103,20 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un registro con email vacío recibe 400")
+  @DisplayName("Un registro con email vacío recibe 400")
+  @Description("Un registro con email vacío responde 400 con el mensaje email: El email no puede estar vacio.")
+  void registroConEmailVacioRecibe400() {
+    postIdentidad(REGISTRO, usuario("", CONTRASENA))
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("email: El email no puede estar vacio"));
+  }
+
+  @Test
   @Story("Una contraseña corta recibe 400")
   @DisplayName("Una contraseña corta recibe 400")
   @Description("Una contraseña de menos de 8 caracteres responde 400 con el mensaje password: La contraseña debe tener entre 8 y 72 caracteres.")
@@ -188,6 +202,20 @@ class IdentidadTest extends GatewayTest {
         .body("status", equalTo(400))
         .body("error", equalTo("Bad Request"))
         .body("message", equalTo("password: La contraseña no puede estar vacia"));
+  }
+
+  @Test
+  @Story("Un login con email vacío recibe 400")
+  @DisplayName("Un login con email vacío recibe 400")
+  @Description("Un login con email vacío responde 400 con el mensaje email: El email no puede estar vacio.")
+  void loginConEmailVacioRecibe400() {
+    postIdentidad(LOGIN, Map.of("email", "", "password", CONTRASENA))
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("email: El email no puede estar vacio"));
   }
 
   @Test
@@ -323,6 +351,47 @@ class IdentidadTest extends GatewayTest {
         .body("status", equalTo(400))
         .body("error", equalTo("Bad Request"))
         .body("message", equalTo("nombre: El nombre debe tener entre 2 y 100 caracteres"));
+  }
+
+  @Test
+  @Story("Editar el perfil con un email inválido recibe 400")
+  @DisplayName("Editar el perfil con un email inválido recibe 400")
+  @Description("PUT /api/v1/usuario/{id} con un email inválido responde 400 con el mensaje email: El email no es valido.")
+  void emailInvalidoAlEditarRecibe400() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", "Prueba Sdet", "email", "no-es-email"))
+        .when()
+        .put("/api/v1/usuario/" + sesion.id())
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("email: El email no es valido"));
+  }
+
+  @Test
+  @Story("Editar el perfil con un email repetido recibe 409")
+  @DisplayName("Editar el perfil con un email repetido recibe 409")
+  @Description("PUT /api/v1/usuario/{id} con el email de otro usuario responde 409 con el mensaje Ya existe un usuario con el email.")
+  void emailRepetidoAlEditarRecibe409() {
+    Sesion dueno = sesionNueva();
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", "Prueba Sdet", "email", dueno.email()))
+        .when()
+        .put("/api/v1/usuario/" + sesion.id())
+        .then()
+        .statusCode(409)
+        .contentType(containsString("json"))
+        .body("status", equalTo(409))
+        .body("error", equalTo("Conflict"))
+        .body("message", equalTo("Ya existe un usuario con el email: " + dueno.email()));
   }
 
   @Test

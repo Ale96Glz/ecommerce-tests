@@ -20,6 +20,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | El inicio de sesión devuelve un token | 200, la misma forma que el registro |
 | Una contraseña incorrecta recibe 401 | `Credenciales invalidas` |
 | Un email inválido recibe 400 | `email: El email no es valido` |
+| Un registro con email vacío recibe 400 | `email: El email no puede estar vacio` |
 | Una contraseña corta recibe 400 | `password: La contraseña debe tener entre 8 y 72 caracteres` |
 | Un email repetido recibe 409 | `Ya existe un usuario con el email: ` más el email |
 | Un usuario no puede crear una categoría | 403, `Se requiere rol ADMIN` |
@@ -27,6 +28,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Una contraseña larga recibe 400 | `password: La contraseña debe tener entre 8 y 72 caracteres` |
 | Un login con email inválido recibe 400 | `email: El email no es valido` |
 | Un login con contraseña vacía recibe 400 | `password: La contraseña no puede estar vacia` |
+| Un login con email vacío recibe 400 | `email: El email no puede estar vacio` |
 | Un email desconocido recibe 401 | `Credenciales invalidas` |
 | Listar usuarios sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Ver un perfil sin token recibe 401 | `Falta el header Authorization Bearer` |
@@ -38,6 +40,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario cambia su nombre | 200, el nombre nuevo |
 | Un usuario no puede editar otro perfil | 403, `No puedes acceder a recursos de otro usuario` |
 | Editar el perfil con un nombre corto recibe 400 | `nombre: El nombre debe tener entre 2 y 100 caracteres` |
+| Editar el perfil con un email inválido recibe 400 | `email: El email no es valido` |
+| Editar el perfil con un email repetido recibe 409 | `Ya existe un usuario con el email: ` más el email |
 | Un usuario comprueba que existe | 200, id y rol USER |
 | Un usuario inexistente recibe 404 | `No existe un usuario válido con id` |
 | Un usuario no puede cambiar un rol | 403, `Se requiere rol ADMIN` |
