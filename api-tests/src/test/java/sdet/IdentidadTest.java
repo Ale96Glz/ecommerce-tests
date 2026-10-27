@@ -213,6 +213,14 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Ver un perfil sin token recibe 401")
+  @DisplayName("Ver un perfil sin token recibe 401")
+  @Description("GET /api/v1/usuario/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
+  void verPerfilSinTokenRecibe401() {
+    sinBearer(given().when().get("/api/v1/usuario/" + AJENO));
+  }
+
+  @Test
   @Story("Un usuario no puede listar los usuarios")
   @DisplayName("Un usuario no puede listar los usuarios")
   @Description("Un USER que lista GET /api/v1/usuario responde 403 con el mensaje Se requiere rol ADMIN.")
