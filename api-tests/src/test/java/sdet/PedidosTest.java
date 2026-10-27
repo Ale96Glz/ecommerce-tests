@@ -16,6 +16,7 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 
 @Epic("Plataforma E-commerce")
@@ -351,6 +352,58 @@ class PedidosTest extends GatewayTest {
         .then()
         .statusCode(200)
         .body("stock", equalTo(antes));
+  }
+
+  @Test
+  @Story("El pedido creado aparece en los míos")
+  @DisplayName("El pedido creado aparece en los míos")
+  @Description("GET /api/v1/pedido/mios incluye el pedido recién creado.")
+  void pedidoCreadoApareceEnLosMios() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/mios")
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", hasItem(pedidoId));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Reactivar un pedido cancelado por el usuario recibe 409")
+  @DisplayName("Reactivar un pedido cancelado por el usuario recibe 409")
+  @Description("PUT /api/v1/pedido/{id}/reactivar de un pedido cancelado por el usuario responde 409 con el motivo USUARIO.")
+  void reactivarPedidoCanceladoPorElUsuarioRecibe409() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = crearPedido(sesion, productoId);
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar")
+        .then()
+        .statusCode(200);
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/reactivar")
+        .then()
+        .statusCode(409)
+        .contentType(containsString("json"))
+        .body("status", equalTo(409))
+        .body("error", equalTo("Conflict"))
+        .body("message", equalTo(
+            "No se puede reactivar el pedido " + pedidoId
+                + " porque está en estado CANCELADO (motivo de cancelación: USUARIO)"));
   }
 
   private static Number productoConStock() {

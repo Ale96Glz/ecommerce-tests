@@ -245,6 +245,96 @@ class PagosTest extends GatewayTest {
     }
   }
 
+  @Test
+  @Story("Un usuario paga su pedido")
+  @DisplayName("Un usuario paga su pedido")
+  @Description("POST /api/v1/pago del propio pedido en CREADO responde 201 con estado PROCESADO.")
+  void usuarioPagaSuPedido() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("pedidoId", equalTo(pedidoId))
+          .body("usuarioId", equalTo(sesion.id()))
+          .body("estado", equalTo("PROCESADO"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Pagar de nuevo un pedido pagado recibe 409")
+  @DisplayName("Pagar de nuevo un pedido pagado recibe 409")
+  @Description("POST /api/v1/pago de un pedido ya pagado responde 409 con el mensaje El pedido ya está pagado.")
+  void pagarDeNuevoUnPedidoPagadoRecibe409() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201);
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(409)
+          .contentType(containsString("json"))
+          .body("status", equalTo(409))
+          .body("error", equalTo("Conflict"))
+          .body("message", equalTo("El pedido con id " + pedidoId + " ya está pagado"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Un monto por encima del máximo queda rechazado")
+  @DisplayName("Un monto por encima del máximo queda rechazado")
+  @Description("POST /api/v1/pago con un monto mayor al máximo responde 201 con estado RECHAZADO y el motivo del tope.")
+  void montoPorEncimaDelMaximoQuedaRechazado() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("pedidoId", equalTo(pedidoId))
+          .body("estado", equalTo("RECHAZADO"))
+          .body("motivoRechazo", equalTo("Monto excede el máximo aprobado (100.00)"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
   private static Number productoConStock() {
     List<Map<String, Object>> productos = given()
         .when()

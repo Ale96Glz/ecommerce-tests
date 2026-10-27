@@ -102,6 +102,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario ve su pedido por id | 200, estado `CREADO` |
 | Un usuario no puede ver un pedido ajeno | 403, `No puedes acceder a recursos de otro usuario` |
 | Cancelar un pedido creado repone el stock | 200, estado `CANCELADO` y el stock vuelve |
+| El pedido creado aparece en los míos | 200, el id está en el arreglo |
+| Reactivar un pedido cancelado por el usuario recibe 409 | motivo de cancelación `USUARIO` |
 
 ## Pagos
 
@@ -125,6 +127,9 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Pagar un pedido inexistente recibe 404 | `No se encontró el pedido con id` |
 | Un pago por id con token inválido recibe 401 | `Token inválido o expirado` |
 | Pagar el pedido de otro usuario recibe 403 | `El pedido con id` no pertenece al usuario autenticado |
+| Un usuario paga su pedido | 201, estado `PROCESADO` |
+| Pagar de nuevo un pedido pagado recibe 409 | `El pedido con id` ya está pagado |
+| Un monto por encima del máximo queda rechazado | 201, estado `RECHAZADO` y el tope aprobado |
 
 ## Notificaciones
 
