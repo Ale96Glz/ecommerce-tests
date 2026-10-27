@@ -30,6 +30,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un email desconocido recibe 401 | `Credenciales invalidas` |
 | Listar usuarios sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Ver un perfil sin token recibe 401 | `Falta el header Authorization Bearer` |
+| Comprobar existencia sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un usuario no puede listar los usuarios | 403, `Se requiere rol ADMIN` |
 | Un usuario no puede paginar los usuarios | 403, `Se requiere rol ADMIN` |
 | Un usuario ve su perfil | 200, id, nombre, email y rol USER |
