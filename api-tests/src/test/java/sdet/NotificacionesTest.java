@@ -260,6 +260,72 @@ class NotificacionesTest extends GatewayTest {
         .body("leida", equalTo(true));
   }
 
+  @Test
+  @Story("Un usuario crea un aviso de pago procesado")
+  @DisplayName("Un usuario crea un aviso de pago procesado")
+  @Description("POST /api/v1/notificacion con tipo PAGO_PROCESADO responde 201 y leida en falso.")
+  void usuarioCreaAvisoDePagoProcesado() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("tipo", "PAGO_PROCESADO", "mensaje", "Prueba Sdet", "referenciaId", 1))
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(201)
+        .contentType(containsString("json"))
+        .body("usuarioId", equalTo(sesion.id()))
+        .body("tipo", equalTo("PAGO_PROCESADO"))
+        .body("mensaje", equalTo("Prueba Sdet"))
+        .body("referenciaId", equalTo(1))
+        .body("leida", equalTo(false))
+        .body("id", instanceOf(Number.class));
+  }
+
+  @Test
+  @Story("Un usuario vuelve a marcar su notificación leída")
+  @DisplayName("Un usuario vuelve a marcar su notificación leída")
+  @Description("PATCH /api/v1/notificacion/{id}/leida sobre una ya leída responde 200 y leida sigue en verdadero.")
+  void usuarioVuelveAMarcarSuNotificacionLeida() {
+    Sesion sesion = sesionNueva();
+    Number id = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(aviso())
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(201)
+        .extract()
+        .path("id");
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .patch("/api/v1/notificacion/" + id + "/leida")
+        .then()
+        .statusCode(200);
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .patch("/api/v1/notificacion/" + id + "/leida")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", equalTo(id))
+        .body("leida", equalTo(true));
+  }
+
+  @Test
+  @Story("Notificaciones propias con token inválido reciben 401")
+  @DisplayName("Notificaciones propias con token inválido reciben 401")
+  @Description("GET /api/v1/notificacion/mias con un Bearer inválido responde 401 con el mensaje Token inválido o expirado.")
+  void notificacionesPropiasConTokenInvalidoReciben401() {
+    bearerInvalido(given().header("Authorization", "Bearer token-falso").when().get("/api/v1/notificacion/mias"));
+  }
+
   private static Map<String, Object> aviso() {
     return Map.of("tipo", "PEDIDO_CREADO", "mensaje", "Prueba Sdet", "referenciaId", 1);
   }

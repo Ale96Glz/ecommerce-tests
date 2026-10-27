@@ -270,6 +270,34 @@ class CatalogoTest extends GatewayTest {
   }
 
   @Test
+  @Story("Pedir más stock del disponible recibe 409")
+  @DisplayName("Pedir más stock del disponible recibe 409")
+  @Description("PUT /api/v1/producto/{id}/stock por encima del stock responde 409 con el mensaje Stock insuficiente.")
+  void stockInsuficienteRecibe409() {
+    Number id = given().when().get("/api/v1/producto").then().statusCode(200).extract().path("[0].id");
+    int disponible = given()
+        .when()
+        .get("/api/v1/producto/" + id)
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("stock");
+    int solicitado = disponible + 1;
+
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .when()
+        .put("/api/v1/producto/" + id + "/stock?cantidad=" + solicitado)
+        .then()
+        .statusCode(409)
+        .contentType(containsString("json"))
+        .body("status", equalTo(409))
+        .body("error", equalTo("Conflict"))
+        .body("message", equalTo(
+            "Stock insuficiente para el producto " + id + ". Disponible: " + disponible + ", solicitado: " + solicitado));
+  }
+
+  @Test
   @Story("Reponer stock de un producto inexistente recibe 404")
   @DisplayName("Reponer stock de un producto inexistente recibe 404")
   @Description("PUT /api/v1/producto/{id}/stock/reponer de un id ausente responde 404 con el mensaje No se encontró el producto con id.")

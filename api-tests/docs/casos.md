@@ -66,6 +66,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario no puede editar una categoría | 403, `Se requiere rol ADMIN` |
 | Un usuario no puede borrar una categoría | 403, `Se requiere rol ADMIN` |
 | Descontar stock de un producto inexistente recibe 404 | `No se encontró el producto con id` |
+| Pedir más stock del disponible recibe 409 | `Stock insuficiente para el producto` |
 | Reponer stock de un producto inexistente recibe 404 | `No se encontró el producto con id` |
 
 ## Pedidos
@@ -134,3 +135,6 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un tipo de notificación inválido recibe 400 | `Tipo de notificación inválido` |
 | Un usuario crea su notificación | 201, tipo, mensaje, referencia y `leida` falso |
 | Un usuario marca su notificación como leída | 200, `leida` verdadero |
+| Un usuario crea un aviso de pago procesado | 201, tipo `PAGO_PROCESADO` y `leida` falso |
+| Un usuario vuelve a marcar su notificación leída | 200, `leida` sigue verdadero |
+| Notificaciones propias con token inválido reciben 401 | `Token inválido o expirado` |
