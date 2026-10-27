@@ -35,6 +35,9 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario no puede paginar los usuarios | 403, `Se requiere rol ADMIN` |
 | Un usuario ve su perfil | 200, id, nombre, email y rol USER |
 | Un usuario no puede ver otro perfil | 403, `No puedes acceder a recursos de otro usuario` |
+| Un usuario cambia su nombre | 200, el nombre nuevo |
+| Un usuario no puede editar otro perfil | 403, `No puedes acceder a recursos de otro usuario` |
+| Editar el perfil con un nombre corto recibe 400 | `nombre: El nombre debe tener entre 2 y 100 caracteres` |
 | Un usuario comprueba que existe | 200, id y rol USER |
 | Un usuario inexistente recibe 404 | `No existe un usuario válido con id` |
 | Un usuario no puede cambiar un rol | 403, `Se requiere rol ADMIN` |

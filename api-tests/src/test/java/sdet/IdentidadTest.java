@@ -272,6 +272,60 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario cambia su nombre")
+  @DisplayName("Un usuario cambia su nombre")
+  @Description("PUT /api/v1/usuario/{id} con el token de ese usuario responde 200 con el nombre nuevo.")
+  void usuarioCambiaSuNombre() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", "Nombre Nuevo", "email", sesion.email()))
+        .when()
+        .put("/api/v1/usuario/" + sesion.id())
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", equalTo(sesion.id()))
+        .body("nombre", equalTo("Nombre Nuevo"))
+        .body("email", equalTo(sesion.email()))
+        .body("rol", equalTo("USER"));
+  }
+
+  @Test
+  @Story("Un usuario no puede editar otro perfil")
+  @DisplayName("Un usuario no puede editar otro perfil")
+  @Description("PUT /api/v1/usuario/{id} de otro id responde 403 con el mensaje No puedes acceder a recursos de otro usuario.")
+  void usuarioNoPuedeEditarOtroPerfil() {
+    recursoAjeno(given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", "Nombre Nuevo", "email", emailNuevo()))
+        .when()
+        .put("/api/v1/usuario/" + AJENO));
+  }
+
+  @Test
+  @Story("Editar el perfil con un nombre corto recibe 400")
+  @DisplayName("Editar el perfil con un nombre corto recibe 400")
+  @Description("PUT /api/v1/usuario/{id} con un nombre de un carácter responde 400 con el mensaje nombre: El nombre debe tener entre 2 y 100 caracteres.")
+  void nombreCortoAlEditarRecibe400() {
+    Sesion sesion = sesionNueva();
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", "A", "email", sesion.email()))
+        .when()
+        .put("/api/v1/usuario/" + sesion.id())
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("nombre: El nombre debe tener entre 2 y 100 caracteres"));
+  }
+
+  @Test
   @Story("Un usuario comprueba que existe")
   @DisplayName("Un usuario comprueba que existe")
   @Description("GET /api/v1/usuario/existe/{id} responde 200 con el id y el rol USER.")
