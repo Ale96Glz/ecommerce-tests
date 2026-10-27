@@ -26,6 +26,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un nombre corto recibe 400 | `nombre: El nombre debe tener entre 2 y 100 caracteres` |
 | Una contraseña larga recibe 400 | `password: La contraseña debe tener entre 8 y 72 caracteres` |
 | Un login con email inválido recibe 400 | `email: El email no es valido` |
+| Un login con contraseña vacía recibe 400 | `password: La contraseña no puede estar vacia` |
 | Un email desconocido recibe 401 | `Credenciales invalidas` |
 | Listar usuarios sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un usuario no puede listar los usuarios | 403, `Se requiere rol ADMIN` |

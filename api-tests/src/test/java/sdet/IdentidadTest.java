@@ -177,6 +177,20 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un login con contraseña vacía recibe 400")
+  @DisplayName("Un login con contraseña vacía recibe 400")
+  @Description("Un login con contraseña vacía responde 400 con el mensaje password: La contraseña no puede estar vacia.")
+  void loginConContrasenaVaciaRecibe400() {
+    postIdentidad(LOGIN, Map.of("email", emailNuevo(), "password", ""))
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("password: La contraseña no puede estar vacia"));
+  }
+
+  @Test
   @Story("Un email desconocido recibe 401")
   @DisplayName("Un email desconocido recibe 401")
   @Description("Un login de un email no registrado responde 401 con el mensaje Credenciales invalidas.")
