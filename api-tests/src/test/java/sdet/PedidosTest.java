@@ -18,6 +18,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.nullValue;
 
 @Epic("Plataforma E-commerce")
 @Feature("Pedidos")
@@ -404,6 +405,124 @@ class PedidosTest extends GatewayTest {
         .body("message", equalTo(
             "No se puede reactivar el pedido " + pedidoId
                 + " porque está en estado CANCELADO (motivo de cancelación: USUARIO)"));
+  }
+
+  @Test
+  @Story("El pedido pagado pasa a PAGADO")
+  @DisplayName("El pedido pagado pasa a PAGADO")
+  @Description("Tras un pago PROCESADO, GET /api/v1/pedido/{id} responde 200 con estado PAGADO.")
+  void pedidoPagadoPasaAPagado() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201);
+
+      esperarEstado(sesion, pedidoId, "PAGADO", null);
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("El pedido con pago rechazado queda cancelado")
+  @DisplayName("El pedido con pago rechazado queda cancelado")
+  @Description("Tras un pago RECHAZADO, GET /api/v1/pedido/{id} responde 200 con estado CANCELADO, motivo PAGO_RECHAZADO y el stock vuelve.")
+  void pedidoConPagoRechazadoQuedaCancelado() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    int antes = stockDe(productoId);
+    Number pedidoId = crearPedido(sesion, productoId);
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+        .when()
+        .post("/api/v1/pago")
+        .then()
+        .statusCode(201);
+
+    esperarEstado(sesion, pedidoId, "CANCELADO", "PAGO_RECHAZADO");
+    esperarStock(productoId, antes);
+  }
+
+  @Test
+  @Story("Reactivar un pedido con pago rechazado lo deja creado")
+  @DisplayName("Reactivar un pedido con pago rechazado lo deja creado")
+  @Description("PUT /api/v1/pedido/{id}/reactivar de un pedido cancelado por pago rechazado responde 200 con estado CREADO.")
+  void reactivarPedidoConPagoRechazadoLoDejaCreado() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201);
+      esperarEstado(sesion, pedidoId, "CANCELADO", "PAGO_RECHAZADO");
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .put("/api/v1/pedido/" + pedidoId + "/reactivar")
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", equalTo(pedidoId))
+          .body("estado", equalTo("CREADO"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  private static void esperarEstado(Sesion sesion, Number pedidoId, String estado, String motivo)
+      throws InterruptedException {
+    for (int intento = 0; intento < 20; intento++) {
+      Response respuesta = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId);
+      if (respuesta.statusCode() == 200
+          && estado.equals(respuesta.path("estado"))
+          && (motivo == null || motivo.equals(respuesta.path("motivoCancelacion")))) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/pedido/" + pedidoId)
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("estado", equalTo(estado))
+        .body("motivoCancelacion", motivo == null ? nullValue() : equalTo(motivo));
+  }
+
+  private static void esperarStock(Number productoId, int esperado) throws InterruptedException {
+    for (int intento = 0; intento < 20 && stockDe(productoId) != esperado; intento++) {
+      Thread.sleep(1000);
+    }
+    given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .body("stock", equalTo(esperado));
   }
 
   private static Number productoConStock() {

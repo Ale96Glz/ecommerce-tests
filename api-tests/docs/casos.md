@@ -104,6 +104,9 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Cancelar un pedido creado repone el stock | 200, estado `CANCELADO` y el stock vuelve |
 | El pedido creado aparece en los míos | 200, el id está en el arreglo |
 | Reactivar un pedido cancelado por el usuario recibe 409 | motivo de cancelación `USUARIO` |
+| El pedido pagado pasa a PAGADO | 200, estado `PAGADO` |
+| El pedido con pago rechazado queda cancelado | 200, estado `CANCELADO`, motivo `PAGO_RECHAZADO` y el stock vuelve |
+| Reactivar un pedido con pago rechazado lo deja creado | 200, estado `CREADO` |
 
 ## Pagos
 
@@ -128,6 +131,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un pago por id con token inválido recibe 401 | `Token inválido o expirado` |
 | Pagar el pedido de otro usuario recibe 403 | `El pedido con id` no pertenece al usuario autenticado |
 | Un usuario paga su pedido | 201, estado `PROCESADO` |
+| El pago procesado aparece en los míos | 200, el id está en el arreglo |
 | Pagar de nuevo un pedido pagado recibe 409 | `El pedido con id` ya está pagado |
 | Un monto por encima del máximo queda rechazado | 201, estado `RECHAZADO` y el tope aprobado |
 

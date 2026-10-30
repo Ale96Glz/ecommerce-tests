@@ -16,6 +16,7 @@ import java.util.Map;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.instanceOf;
 
 @Epic("Plataforma E-commerce")
@@ -330,6 +331,40 @@ class PagosTest extends GatewayTest {
           .body("pedidoId", equalTo(pedidoId))
           .body("estado", equalTo("RECHAZADO"))
           .body("motivoRechazo", equalTo("Monto excede el máximo aprobado (100.00)"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("El pago procesado aparece en los míos")
+  @DisplayName("El pago procesado aparece en los míos")
+  @Description("GET /api/v1/pago/mios incluye el pago PROCESADO del propio pedido.")
+  void pagoProcesadoApareceEnLosMios() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      Number pagoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .extract()
+          .path("id");
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pago/mios")
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", hasItem(pagoId));
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
