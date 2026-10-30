@@ -165,3 +165,6 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario no puede marcar la notificación de otro | 403 y sigue sin leerse |
 | La notificación creada aparece en no leídas | 200, el id está en el arreglo |
 | La notificación leída sale de no leídas | 200, el id ya no está |
+| El pedido creado avisa al usuario | aviso `PEDIDO_CREADO` de ese pedido |
+| El pago procesado avisa al usuario | aviso `PAGO_PROCESADO` con estado `PROCESADO` |
+| El pago rechazado avisa al usuario | aviso `PAGO_PROCESADO` con estado `RECHAZADO` y el tope |

@@ -6,6 +6,7 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
+import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -423,6 +425,170 @@ class NotificacionesTest extends GatewayTest {
         .statusCode(200)
         .contentType(containsString("json"))
         .body("id", not(hasItem(id)));
+  }
+
+  @Test
+  @Story("El pedido creado avisa al usuario")
+  @DisplayName("El pedido creado avisa al usuario")
+  @Description("GET /api/v1/notificacion/mias incluye un aviso PEDIDO_CREADO del pedido recién creado.")
+  void pedidoCreadoAvisaAlUsuario() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      String aviso = "Tu pedido #" + pedidoId + " fue creado.";
+      esperarAviso(sesion, "PEDIDO_CREADO", aviso);
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("El pago procesado avisa al usuario")
+  @DisplayName("El pago procesado avisa al usuario")
+  @Description("GET /api/v1/notificacion/mias incluye un aviso PAGO_PROCESADO con estado PROCESADO.")
+  void pagoProcesadoAvisaAlUsuario() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201);
+      esperarAviso(sesion, "PAGO_PROCESADO", "del pedido #" + pedidoId + " quedó en estado PROCESADO");
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("El pago rechazado avisa al usuario")
+  @DisplayName("El pago rechazado avisa al usuario")
+  @Description("GET /api/v1/notificacion/mias incluye un aviso PAGO_PROCESADO con estado RECHAZADO y el motivo del tope.")
+  void pagoRechazadoAvisaAlUsuario() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201);
+      esperarAviso(
+          sesion,
+          "PAGO_PROCESADO",
+          "del pedido #" + pedidoId + " quedó en estado RECHAZADO",
+          "Monto excede el máximo aprobado");
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  private static void esperarAviso(Sesion sesion, String tipo, String... fragmentos) throws InterruptedException {
+    for (int intento = 0; intento < 20 && !avisoPresente(sesion, tipo, fragmentos); intento++) {
+      Thread.sleep(1000);
+    }
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/notificacion/mias")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("findAll { it.tipo == '" + tipo + "' }.mensaje", hasItem(contiene(fragmentos)));
+  }
+
+  private static boolean avisoPresente(Sesion sesion, String tipo, String... fragmentos) {
+    List<String> mensajes = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/notificacion/mias")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("findAll { it.tipo == '" + tipo + "' }.mensaje");
+    if (mensajes == null) {
+      return false;
+    }
+    for (String mensaje : mensajes) {
+      if (mensaje != null && java.util.Arrays.stream(fragmentos).allMatch(mensaje::contains)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static org.hamcrest.Matcher<String> contiene(String... fragmentos) {
+    if (fragmentos.length == 1) {
+      return containsString(fragmentos[0]);
+    }
+    return allOf(containsString(fragmentos[0]), containsString(fragmentos[1]));
+  }
+
+  private static Number productoConStock() {
+    List<Map<String, Object>> productos = given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      if (stock >= 1 && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        return (Number) producto.get("id");
+      }
+    }
+    throw new IllegalStateException("No hay un producto con stock");
+  }
+
+  private static Number crearPedido(Sesion sesion, Number productoId) {
+    return given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
+        .when()
+        .post("/api/v1/pedido")
+        .then()
+        .statusCode(201)
+        .extract()
+        .path("id");
+  }
+
+  private static void devolverPedido(Sesion sesion, Number pedidoId, Number productoId) {
+    if (pedidoId == null) {
+      return;
+    }
+    Response respuesta = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar");
+    if (respuesta.statusCode() == 200) {
+      return;
+    }
+    String mensaje = respuesta.path("message");
+    if (mensaje != null && mensaje.contains("PAGADO")) {
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .put("/api/v1/producto/" + productoId + "/stock/reponer?cantidad=1")
+          .then()
+          .statusCode(200);
+    }
   }
 
   private static Map<String, Object> aviso() {
