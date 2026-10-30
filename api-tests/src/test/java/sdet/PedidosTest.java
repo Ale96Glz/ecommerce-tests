@@ -322,6 +322,26 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un usuario no puede cancelar un pedido ajeno")
+  @DisplayName("Un usuario no puede cancelar un pedido ajeno")
+  @Description("PUT /api/v1/pedido/{id}/cancelar de otro usuario responde 403 con el mensaje No puedes acceder a recursos de otro usuario.")
+  void usuarioNoPuedeCancelarUnPedidoAjeno() {
+    Sesion dueno = sesionNueva();
+    Sesion ajeno = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(dueno, productoId);
+      recursoAjeno(given()
+          .header("Authorization", "Bearer " + ajeno.token())
+          .when()
+          .put("/api/v1/pedido/" + pedidoId + "/cancelar"));
+    } finally {
+      devolverPedido(dueno, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("Cancelar un pedido creado repone el stock")
   @DisplayName("Cancelar un pedido creado repone el stock")
   @Description("PUT /api/v1/pedido/{id}/cancelar responde 200 con estado CANCELADO y el stock vuelve a la unidad descontada.")
@@ -427,6 +447,42 @@ class PedidosTest extends GatewayTest {
           .statusCode(201);
 
       esperarEstado(sesion, pedidoId, "PAGADO", null);
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Cancelar un pedido pagado recibe 409")
+  @DisplayName("Cancelar un pedido pagado recibe 409")
+  @Description("PUT /api/v1/pedido/{id}/cancelar de un pedido PAGADO responde 409 porque está en estado PAGADO.")
+  void cancelarUnPedidoPagadoRecibe409() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201);
+      esperarEstado(sesion, pedidoId, "PAGADO", null);
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .put("/api/v1/pedido/" + pedidoId + "/cancelar")
+          .then()
+          .statusCode(409)
+          .contentType(containsString("json"))
+          .body("status", equalTo(409))
+          .body("error", equalTo("Conflict"))
+          .body("message", equalTo(
+              "No se puede cancelar el pedido " + pedidoId + " porque está en estado PAGADO"));
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
