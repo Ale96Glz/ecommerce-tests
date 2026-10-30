@@ -370,6 +370,78 @@ class PagosTest extends GatewayTest {
     }
   }
 
+  @Test
+  @Story("Un usuario ve su pago por id")
+  @DisplayName("Un usuario ve su pago por id")
+  @Description("GET /api/v1/pago/{id} del propio pago PROCESADO responde 200 con ese id, el pedido y el estado.")
+  void usuarioVeSuPagoPorId() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      Number pagoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .extract()
+          .path("id");
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pago/" + pagoId)
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", equalTo(pagoId))
+          .body("pedidoId", equalTo(pedidoId))
+          .body("estado", equalTo("PROCESADO"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
+  @Story("Un usuario ve el pago de su pedido")
+  @DisplayName("Un usuario ve el pago de su pedido")
+  @Description("GET /api/v1/pago/pedido/{id} del propio pedido pagado responde 200 con ese pago y estado PROCESADO.")
+  void usuarioVeElPagoDeSuPedido() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      Number pagoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .extract()
+          .path("id");
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pago/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", equalTo(pagoId))
+          .body("pedidoId", equalTo(pedidoId))
+          .body("estado", equalTo("PROCESADO"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
   private static Number productoConStock() {
     List<Map<String, Object>> productos = given()
         .when()

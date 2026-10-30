@@ -134,6 +134,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Pagar el pedido de otro usuario recibe 403 | `El pedido con id` no pertenece al usuario autenticado |
 | Un usuario paga su pedido | 201, estado `PROCESADO` |
 | El pago procesado aparece en los míos | 200, el id está en el arreglo |
+| Un usuario ve su pago por id | 200, ese pago en estado `PROCESADO` |
+| Un usuario ve el pago de su pedido | 200, el pago de ese pedido en estado `PROCESADO` |
 | Pagar de nuevo un pedido pagado recibe 409 | `El pedido con id` ya está pagado |
 | Un monto por encima del máximo queda rechazado | 201, estado `RECHAZADO` y el tope aprobado |
 
