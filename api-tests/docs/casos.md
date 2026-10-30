@@ -99,6 +99,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Los pedidos del usuario con token inválido reciben 401 | `Token inválido o expirado` |
 | Un pedido por id con token inválido recibe 401 | `Token inválido o expirado` |
 | Crear un pedido descuenta el stock | 201, estado `CREADO` y el stock baja una unidad |
+| Pedir un producto inexistente recibe 404 | `No existe el producto con id` |
 | Un usuario ve su pedido por id | 200, estado `CREADO` |
 | Un usuario no puede ver un pedido ajeno | 403, `No puedes acceder a recursos de otro usuario` |
 | Un usuario no puede cancelar un pedido ajeno | 403, `No puedes acceder a recursos de otro usuario` |

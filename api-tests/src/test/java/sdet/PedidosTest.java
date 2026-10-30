@@ -277,6 +277,21 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Pedir un producto inexistente recibe 404")
+  @DisplayName("Pedir un producto inexistente recibe 404")
+  @Description("POST /api/v1/pedido de un producto ausente responde 404 con el mensaje No existe el producto con id.")
+  void pedirUnProductoInexistenteRecibe404() {
+    noEncontrado(
+        given()
+            .header("Authorization", "Bearer " + sesionNueva().token())
+            .contentType("application/json")
+            .body(Map.of("items", List.of(Map.of("productoId", Long.parseLong(AJENO), "cantidad", 1))))
+            .when()
+            .post("/api/v1/pedido"),
+        "No existe el producto con id: " + AJENO);
+  }
+
+  @Test
   @Story("Un usuario ve su pedido por id")
   @DisplayName("Un usuario ve su pedido por id")
   @Description("GET /api/v1/pedido/{id} con el token del dueño responde 200 con estado CREADO.")
