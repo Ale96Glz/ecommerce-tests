@@ -214,6 +214,25 @@ class NotificacionesTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un mensaje vacío recibe 400")
+  @DisplayName("Un mensaje vacío recibe 400")
+  @Description("POST /api/v1/notificacion con mensaje vacío responde 400 con el mensaje mensaje: El mensaje es obligatorio.")
+  void mensajeVacioRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("tipo", "PEDIDO_CREADO", "mensaje", "", "referenciaId", 1))
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("mensaje: El mensaje es obligatorio"));
+  }
+
+  @Test
   @Story("Un usuario crea su notificación")
   @DisplayName("Un usuario crea su notificación")
   @Description("POST /api/v1/notificacion responde 201 con el tipo, el mensaje, la referencia y leida en falso.")

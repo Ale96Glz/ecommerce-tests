@@ -172,6 +172,25 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un monto cero recibe 400")
+  @DisplayName("Un monto cero recibe 400")
+  @Description("POST /api/v1/pago con monto 0 responde 400 con el mensaje monto: El monto debe ser mayor a 0.")
+  void montoCeroRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("pedidoId", 1, "monto", 0))
+        .when()
+        .post("/api/v1/pago")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("monto: El monto debe ser mayor a 0"));
+  }
+
+  @Test
   @Story("Los pagos de un usuario sin token reciben 401")
   @DisplayName("Los pagos de un usuario sin token reciben 401")
   @Description("GET /api/v1/pago/usuario/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")

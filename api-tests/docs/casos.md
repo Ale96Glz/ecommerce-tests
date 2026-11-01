@@ -25,6 +25,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un email repetido recibe 409 | `Ya existe un usuario con el email: ` más el email |
 | Un usuario no puede crear una categoría | 403, `Se requiere rol ADMIN` |
 | Un nombre corto recibe 400 | `nombre: El nombre debe tener entre 2 y 100 caracteres` |
+| Un registro con nombre vacío recibe 400 | `nombre: El nombre debe tener entre 2 y 100 caracteres; nombre: El nombre no puede estar vacio` |
 | Una contraseña larga recibe 400 | `password: La contraseña debe tener entre 8 y 72 caracteres` |
 | Un login con email inválido recibe 400 | `email: El email no es valido` |
 | Un login con contraseña vacía recibe 400 | `password: La contraseña no puede estar vacia` |
@@ -91,6 +92,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un pedido inexistente recibe 404 | `No se encontró el pedido con id` |
 | Un pedido por id sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Crear un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
+| Un pedido sin productos recibe 400 | `items: El pedido debe tener al menos un producto` |
+| Una cantidad menor a uno recibe 400 | `items[0].cantidad: La cantidad debe ser al menos 1` |
 | Cancelar un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Reactivar un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Cancelar un pedido inexistente recibe 404 | `No se encontró el pedido con id` |
@@ -127,6 +130,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario ve los pagos de su id | 200, arreglo |
 | Un usuario no puede ver los pagos de otro | 403, `No puedes acceder a recursos de otro usuario` |
 | Crear un pago sin token recibe 401 | `Falta el header Authorization Bearer` |
+| Un monto cero recibe 400 | `monto: El monto debe ser mayor a 0` |
 | Los pagos de un usuario sin token reciben 401 | `Falta el header Authorization Bearer` |
 | El pago de un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Los pagos del usuario con token inválido reciben 401 | `Token inválido o expirado` |
@@ -160,6 +164,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Marcar una notificación sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Crear una notificación sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un tipo de notificación inválido recibe 400 | `Tipo de notificación inválido` |
+| Un mensaje vacío recibe 400 | `mensaje: El mensaje es obligatorio` |
 | Un usuario crea su notificación | 201, tipo, mensaje, referencia y `leida` falso |
 | Un usuario marca su notificación como leída | 200, `leida` verdadero |
 | Un usuario crea un aviso de pago procesado | 201, tipo `PAGO_PROCESADO` y `leida` falso |

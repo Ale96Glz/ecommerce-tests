@@ -163,6 +163,21 @@ class IdentidadTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un registro con nombre vacío recibe 400")
+  @DisplayName("Un registro con nombre vacío recibe 400")
+  @Description("Un nombre vacío incumple NotBlank y Size, y auth une ambos mensajes.")
+  void registroConNombreVacioRecibe400() {
+    postIdentidad(REGISTRO, Map.of("nombre", "", "email", emailNuevo(), "password", CONTRASENA))
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo(
+            "nombre: El nombre debe tener entre 2 y 100 caracteres; nombre: El nombre no puede estar vacio"));
+  }
+
+  @Test
   @Story("Una contraseña larga recibe 400")
   @DisplayName("Una contraseña larga recibe 400")
   @Description("Una contraseña de más de 72 caracteres responde 400 con el mensaje password: La contraseña debe tener entre 8 y 72 caracteres.")

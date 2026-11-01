@@ -180,6 +180,44 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un pedido sin productos recibe 400")
+  @DisplayName("Un pedido sin productos recibe 400")
+  @Description("POST /api/v1/pedido con items vacío responde 400 con el mensaje items: El pedido debe tener al menos un producto.")
+  void pedidoSinProductosRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("items", List.of()))
+        .when()
+        .post("/api/v1/pedido")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("items: El pedido debe tener al menos un producto"));
+  }
+
+  @Test
+  @Story("Una cantidad menor a uno recibe 400")
+  @DisplayName("Una cantidad menor a uno recibe 400")
+  @Description("POST /api/v1/pedido con cantidad 0 responde 400 con el mensaje items[0].cantidad: La cantidad debe ser al menos 1.")
+  void cantidadMenorAUnoRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("items", List.of(Map.of("productoId", 1, "cantidad", 0))))
+        .when()
+        .post("/api/v1/pedido")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("items[0].cantidad: La cantidad debe ser al menos 1"));
+  }
+
+  @Test
   @Story("Cancelar un pedido sin token recibe 401")
   @DisplayName("Cancelar un pedido sin token recibe 401")
   @Description("PUT /api/v1/pedido/{id}/cancelar sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")
