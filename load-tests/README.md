@@ -1,10 +1,12 @@
-# Carga del gateway
+# Pruebas de carga del gateway
 
-Rampa gradual de `GET /actuator/health` contra el gateway del laboratorio. Los usuarios siguen vivos y repiten esa petición. El reporte de Gatling agrupa por nombre de petición y muestra mínimo, media, percentiles y máximo.
+Este repositorio reúne las simulaciones de Gatling del gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. Una corrida ejecuta una simulación y deja su reporte en una carpeta propia.
 
-La cifra es de laboratorio, en la máquina que inyecta, contra el gateway local. No es la capacidad de un despliegue ni la de login, catálogo o pedidos.
+La que está ahora es la rampa de health. Las siguientes se agregan en ese paquete, cada una con su clase.
 
-Las pruebas de contrato del api estan en [ecommerce-rest-assured](https://github.com/Ale96Glz/ecommerce-rest-assured)
+La cifra de cada corrida es de laboratorio, en la máquina que inyecta, contra el gateway local.
+
+Las pruebas de contrato del api están en [ecommerce-rest-assured](https://github.com/Ale96Glz/ecommerce-rest-assured)
 
 ## Requisitos
 
@@ -12,11 +14,19 @@ Las pruebas de contrato del api estan en [ecommerce-rest-assured](https://github
 - Gateway levantado.
 - `BASE_URL`. Si no se define, la simulación usa `https://ecommerce.local`. Esa dirección solo la ve la máquina local.
 
-`GET /actuator/health` no entra en el límite de peticiones. Login, registro y el resto de rutas autenticadas sí tienen límite: un 429 ahí es el límite, no una caída. Esas rutas no se usan para buscar el quiebre.
+## Escenarios
 
-## Rampa
+| Simulación | Escenario |
+|---|---|
+| `sdet.HealthBreakpointSimulation` | Rampa de `GET /actuator/health` |
+
+El reporte de Gatling agrupa por nombre de petición y muestra mínimo, media, percentiles y máximo.
+
+## Rampa de health
 
 La simulación es `sdet.HealthBreakpointSimulation`.
+
+`GET /actuator/health` no entra en el límite de peticiones. Login, registro y el resto de rutas autenticadas sí tienen límite: un 429 ahí es el límite de esa ruta, no una caída del gateway. Este escenario no las usa. La cifra de esta rampa describe el health; login, catálogo y pedidos se miden en sus propios escenarios.
 
 Modelo cerrado: cada usuario permanece y vuelve a pedir el health. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo, para que cada usuario alcance a hacer una petición en ese nivel. Las conexiones se comparten, así no se abre un socket por usuario.
 
@@ -35,17 +45,17 @@ Valores de la corrida corta:
 
 ## Ejecución
 
-Desde esta carpeta:
+Desde esta carpeta. La propiedad elige el escenario; si se omite, Maven usa la clase del `pom.xml`, que hoy es `sdet.HealthBreakpointSimulation`.
 
 ```powershell
 $env:BASE_URL = "https://ecommerce.local"
-mvn gatling:test
+mvn gatling:test -Dgatling.simulationClass=sdet.HealthBreakpointSimulation
 ```
 
-Para alargar la rampa, las propiedades van en la JVM de Gatling:
+Para alargar la rampa de health, las propiedades van en la JVM de Gatling:
 
 ```powershell
-mvn gatling:test '-Dgatling.jvmArgs=-DstepUsers=10 -Dlevels=6 -DlevelSeconds=20'
+mvn gatling:test -Dgatling.simulationClass=sdet.HealthBreakpointSimulation '-Dgatling.jvmArgs=-DstepUsers=10 -Dlevels=6 -DlevelSeconds=20'
 ```
 
 El reporte queda en `target/gatling/`, en la carpeta de esa corrida. El `index.html` es el gráfico.
@@ -56,4 +66,4 @@ El reporte queda en `target/gatling/`, en la carpeta de esa corrida. El `index.h
 mvn gatling:enterprisePackage
 ```
 
-Genera `target/*-shaded.jar`. Ese JAR se sube en Gatling Enterprise, en Packages. Hace falta Gatling 3.11 o posterior. El gateway tiene que ser alcanzable desde los inyectores.
+Genera `target/*-shaded.jar`. Ese JAR incluye todas las simulaciones del repositorio y se sube en Gatling Enterprise, en Packages. En el panel se elige qué clase ejecutar. Hace falta Gatling 3.11 o posterior. El gateway tiene que ser alcanzable desde los inyectores.
