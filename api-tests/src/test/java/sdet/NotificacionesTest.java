@@ -233,6 +233,44 @@ class NotificacionesTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un aviso sin tipo recibe 400")
+  @DisplayName("Un aviso sin tipo recibe 400")
+  @Description("POST /api/v1/notificacion sin tipo responde 400 con el mensaje tipo: El tipo es obligatorio.")
+  void avisoSinTipoRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("mensaje", "Prueba Sdet", "referenciaId", 1))
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("tipo: El tipo es obligatorio"));
+  }
+
+  @Test
+  @Story("Un aviso sin referencia recibe 400")
+  @DisplayName("Un aviso sin referencia recibe 400")
+  @Description("POST /api/v1/notificacion sin referencia responde 400 con el mensaje referenciaId: La referencia es obligatoria.")
+  void avisoSinReferenciaRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("tipo", "PEDIDO_CREADO", "mensaje", "Prueba Sdet"))
+        .when()
+        .post("/api/v1/notificacion")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("referenciaId: La referencia es obligatoria"));
+  }
+
+  @Test
   @Story("Un usuario crea su notificación")
   @DisplayName("Un usuario crea su notificación")
   @Description("POST /api/v1/notificacion responde 201 con el tipo, el mensaje, la referencia y leida en falso.")

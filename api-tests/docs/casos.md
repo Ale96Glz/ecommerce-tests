@@ -177,6 +177,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Crear una notificación sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un tipo de notificación inválido recibe 400 | `Tipo de notificación inválido` |
 | Un mensaje vacío recibe 400 | `mensaje: El mensaje es obligatorio` |
+| Un aviso sin tipo recibe 400 | `tipo: El tipo es obligatorio` |
+| Un aviso sin referencia recibe 400 | `referenciaId: La referencia es obligatoria` |
 | Un usuario crea su notificación | 201, tipo, mensaje, referencia y `leida` falso |
 | Un usuario marca su notificación como leída | 200, `leida` verdadero |
 | Un usuario crea un aviso de pago procesado | 201, tipo `PAGO_PROCESADO` y `leida` falso |
