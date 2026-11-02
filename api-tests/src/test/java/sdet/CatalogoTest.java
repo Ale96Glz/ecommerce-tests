@@ -339,6 +339,36 @@ class CatalogoTest extends GatewayTest {
   }
 
   @Test
+  @Story("Una descripción de producto larga recibe 400")
+  @DisplayName("Una descripción de producto larga recibe 400")
+  @Description("POST /api/v1/producto con una descripción de más de 500 caracteres responde 400 con el mensaje descripcion: La descripcion no puede tener mas de 500 caracteres.")
+  void descripcionDeProductoLargaRecibe400() {
+    Map<String, Object> cuerpo = productoBase();
+    cuerpo.put("descripcion", "A".repeat(501));
+    validacionDeProducto(cuerpo, "descripcion: La descripcion no puede tener mas de 500 caracteres");
+  }
+
+  @Test
+  @Story("Un producto sin precio recibe 400")
+  @DisplayName("Un producto sin precio recibe 400")
+  @Description("POST /api/v1/producto sin precio responde 400 con el mensaje precio: El precio es obligatorio.")
+  void productoSinPrecioRecibe400() {
+    Map<String, Object> cuerpo = productoBase();
+    cuerpo.remove("precio");
+    validacionDeProducto(cuerpo, "precio: El precio es obligatorio");
+  }
+
+  @Test
+  @Story("Un precio por encima del máximo recibe 400")
+  @DisplayName("Un precio por encima del máximo recibe 400")
+  @Description("POST /api/v1/producto con un precio sobre el máximo responde 400 con el mensaje precio: Exediste el limite del precio permitido.")
+  void precioPorEncimaDelMaximoRecibe400() {
+    Map<String, Object> cuerpo = productoBase();
+    cuerpo.put("precio", 10000000000L);
+    validacionDeProducto(cuerpo, "precio: Exediste el limite del precio permitido");
+  }
+
+  @Test
   @Story("Un nombre de categoría de dos caracteres recibe 400")
   @DisplayName("Un nombre de categoría de dos caracteres recibe 400")
   @Description("POST /api/v1/categoria con un nombre de dos caracteres responde 400 con el mensaje nombre: El nombre de la categoria debe tener entre 3 y 50 caracteres.")
