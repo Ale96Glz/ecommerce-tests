@@ -78,6 +78,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un nombre de producto de un carácter recibe 400 | `nombre: El nombre del producto debe tener entre 2 y 100 caracteres` |
 | Un precio cero recibe 400 | `precio: El precio debe ser mayor a 0` |
 | Un producto sin categoría recibe 400 | `categoriaId: La categoria es obligatoria` |
+| Un nombre de categoría de dos caracteres recibe 400 | `nombre: El nombre de la categoria debe tener entre 3 y 50 caracteres` |
+| Una descripción de categoría larga recibe 400 | `descripcion: La descripcion no puede tener mas de 500 caracteres` |
 
 ## Pedidos
 

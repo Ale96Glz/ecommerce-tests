@@ -338,6 +338,26 @@ class CatalogoTest extends GatewayTest {
     validacionDeProducto(cuerpo, "categoriaId: La categoria es obligatoria");
   }
 
+  @Test
+  @Story("Un nombre de categoría de dos caracteres recibe 400")
+  @DisplayName("Un nombre de categoría de dos caracteres recibe 400")
+  @Description("POST /api/v1/categoria con un nombre de dos caracteres responde 400 con el mensaje nombre: El nombre de la categoria debe tener entre 3 y 50 caracteres.")
+  void nombreDeCategoriaDeDosCaracteresRecibe400() {
+    Map<String, String> cuerpo = categoriaBase();
+    cuerpo.put("nombre", "Ab");
+    validacionDeCategoria(cuerpo, "nombre: El nombre de la categoria debe tener entre 3 y 50 caracteres ");
+  }
+
+  @Test
+  @Story("Una descripción de categoría larga recibe 400")
+  @DisplayName("Una descripción de categoría larga recibe 400")
+  @Description("POST /api/v1/categoria con una descripción de más de 500 caracteres responde 400 con el mensaje descripcion: La descripcion no puede tener mas de 500 caracteres.")
+  void descripcionDeCategoriaLargaRecibe400() {
+    Map<String, String> cuerpo = categoriaBase();
+    cuerpo.put("descripcion", "A".repeat(501));
+    validacionDeCategoria(cuerpo, "descripcion: La descripcion no puede tener mas de 500 caracteres");
+  }
+
   private static void validacionDeProducto(Map<String, Object> cuerpo, String mensaje) {
     given()
         .header("Authorization", "Bearer " + sesionNueva().token())
@@ -359,6 +379,25 @@ class CatalogoTest extends GatewayTest {
 
   private static Map<String, Object> productoValido(Number categoriaId) {
     return Map.of("nombre", "Sdet Prod", "descripcion", "Prueba", "precio", 10.0, "stock", 1, "categoriaId", categoriaId);
+  }
+
+  private static void validacionDeCategoria(Map<String, String> cuerpo, String mensaje) {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType(ContentType.JSON)
+        .body(cuerpo)
+        .when()
+        .post("/api/v1/categoria")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo(mensaje));
+  }
+
+  private static Map<String, String> categoriaBase() {
+    return new HashMap<>(categoriaValida());
   }
 
   private static Map<String, String> categoriaValida() {
