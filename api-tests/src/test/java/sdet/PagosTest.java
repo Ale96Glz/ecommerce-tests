@@ -191,6 +191,44 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un pago sin pedido recibe 400")
+  @DisplayName("Un pago sin pedido recibe 400")
+  @Description("POST /api/v1/pago sin pedido responde 400 con el mensaje pedidoId: El pedido es obligatorio.")
+  void pagoSinPedidoRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("monto", 10.0))
+        .when()
+        .post("/api/v1/pago")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("pedidoId: El pedido es obligatorio"));
+  }
+
+  @Test
+  @Story("Un pago sin monto recibe 400")
+  @DisplayName("Un pago sin monto recibe 400")
+  @Description("POST /api/v1/pago sin monto responde 400 con el mensaje monto: El monto es obligatorio.")
+  void pagoSinMontoRecibe400() {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType("application/json")
+        .body(Map.of("pedidoId", 1))
+        .when()
+        .post("/api/v1/pago")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo("monto: El monto es obligatorio"));
+  }
+
+  @Test
   @Story("Los pagos de un usuario sin token reciben 401")
   @DisplayName("Los pagos de un usuario sin token reciben 401")
   @Description("GET /api/v1/pago/usuario/{id} sin Authorization responde 401 con el mensaje Falta el header Authorization Bearer.")

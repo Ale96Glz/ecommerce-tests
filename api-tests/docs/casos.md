@@ -102,6 +102,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Crear un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un pedido sin productos recibe 400 | `items: El pedido debe tener al menos un producto` |
 | Una cantidad menor a uno recibe 400 | `items[0].cantidad: La cantidad debe ser al menos 1` |
+| Un pedido sin producto recibe 400 | `items[0].productoId: El producto es obligatorio` |
+| Un pedido sin cantidad recibe 400 | `items[0].cantidad: La cantidad es obligatoria` |
 | Cancelar un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Reactivar un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Cancelar un pedido inexistente recibe 404 | `No se encontró el pedido con id` |
@@ -139,6 +141,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario no puede ver los pagos de otro | 403, `No puedes acceder a recursos de otro usuario` |
 | Crear un pago sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Un monto cero recibe 400 | `monto: El monto debe ser mayor a 0` |
+| Un pago sin pedido recibe 400 | `pedidoId: El pedido es obligatorio` |
+| Un pago sin monto recibe 400 | `monto: El monto es obligatorio` |
 | Los pagos de un usuario sin token reciben 401 | `Falta el header Authorization Bearer` |
 | El pago de un pedido sin token recibe 401 | `Falta el header Authorization Bearer` |
 | Los pagos del usuario con token inválido reciben 401 | `Token inválido o expirado` |
