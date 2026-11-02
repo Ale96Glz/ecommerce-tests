@@ -1,8 +1,8 @@
-# Pruebas de API y de rendimiento
+# Pruebas de contrato del gateway
 
-Contrato HTTP de identidad, catálogo, pedidos, pagos y notificaciones. Cada test comprueba un comportamiento: el código HTTP y la forma del JSON. Las peticiones salen por `BASE_URL`. No se llama a los puertos internos de los servicios.
+Contrato HTTP de identidad, catálogo, pedidos, pagos y notificaciones con REST Assured, JUnit 5 y Allure. Cada test comprueba un comportamiento: el código HTTP y la forma del JSON. Las peticiones salen por `BASE_URL`. No se llama a los puertos internos de los servicios.
 
-La carga va con Gatling, en un módulo hermano. Todavía no está en esta carpeta.
+La carga con Gatling está en [ecommerce-gatling](https://github.com/Ale96Glz/ecommerce-gatling).
 
 ## Requisitos
 
