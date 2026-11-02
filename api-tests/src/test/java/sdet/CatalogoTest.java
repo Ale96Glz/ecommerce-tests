@@ -10,6 +10,7 @@ import io.restassured.http.ContentType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
@@ -305,6 +306,55 @@ class CatalogoTest extends GatewayTest {
     noEncontrado(
         given().header("Authorization", "Bearer " + sesionNueva().token()).when().put("/api/v1/producto/" + AJENO + "/stock/reponer?cantidad=1"),
         "No se encontró el producto con id: " + AJENO);
+  }
+
+  @Test
+  @Story("Un nombre de producto de un carácter recibe 400")
+  @DisplayName("Un nombre de producto de un carácter recibe 400")
+  @Description("POST /api/v1/producto con un nombre de un carácter responde 400 con el mensaje nombre: El nombre del producto debe tener entre 2 y 100 caracteres.")
+  void nombreDeProductoDeUnCaracterRecibe400() {
+    Map<String, Object> cuerpo = productoBase();
+    cuerpo.put("nombre", "A");
+    validacionDeProducto(cuerpo, "nombre: El nombre del producto debe tener entre 2 y 100 caracteres");
+  }
+
+  @Test
+  @Story("Un precio cero recibe 400")
+  @DisplayName("Un precio cero recibe 400")
+  @Description("POST /api/v1/producto con precio 0 responde 400 con el mensaje precio: El precio debe ser mayor a 0.")
+  void precioCeroRecibe400() {
+    Map<String, Object> cuerpo = productoBase();
+    cuerpo.put("precio", 0);
+    validacionDeProducto(cuerpo, "precio: El precio debe ser mayor a 0");
+  }
+
+  @Test
+  @Story("Un producto sin categoría recibe 400")
+  @DisplayName("Un producto sin categoría recibe 400")
+  @Description("POST /api/v1/producto sin categoría responde 400 con el mensaje categoriaId: La categoria es obligatoria.")
+  void productoSinCategoriaRecibe400() {
+    Map<String, Object> cuerpo = productoBase();
+    cuerpo.remove("categoriaId");
+    validacionDeProducto(cuerpo, "categoriaId: La categoria es obligatoria");
+  }
+
+  private static void validacionDeProducto(Map<String, Object> cuerpo, String mensaje) {
+    given()
+        .header("Authorization", "Bearer " + sesionNueva().token())
+        .contentType(ContentType.JSON)
+        .body(cuerpo)
+        .when()
+        .post("/api/v1/producto")
+        .then()
+        .statusCode(400)
+        .contentType(containsString("json"))
+        .body("status", equalTo(400))
+        .body("error", equalTo("Bad Request"))
+        .body("message", equalTo(mensaje));
+  }
+
+  private static Map<String, Object> productoBase() {
+    return new HashMap<>(productoValido(primeraCategoria()));
   }
 
   private static Map<String, Object> productoValido(Number categoriaId) {

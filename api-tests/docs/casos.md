@@ -75,6 +75,9 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Descontar stock de un producto inexistente recibe 404 | `No se encontró el producto con id` |
 | Pedir más stock del disponible recibe 409 | `Stock insuficiente para el producto` |
 | Reponer stock de un producto inexistente recibe 404 | `No se encontró el producto con id` |
+| Un nombre de producto de un carácter recibe 400 | `nombre: El nombre del producto debe tener entre 2 y 100 caracteres` |
+| Un precio cero recibe 400 | `precio: El precio debe ser mayor a 0` |
+| Un producto sin categoría recibe 400 | `categoriaId: La categoria es obligatoria` |
 
 ## Pedidos
 
