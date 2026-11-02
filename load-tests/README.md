@@ -4,7 +4,7 @@ Rampa gradual de `GET /actuator/health` contra el gateway del laboratorio. Los u
 
 La cifra es de laboratorio, en la máquina que inyecta, contra el gateway local. No es la capacidad de un despliegue ni la de login, catálogo o pedidos.
 
-Las pruebas de contrato del api estan en[ecommerce-rest-assured](https://github.com/Ale96Glz/ecommerce-rest-assured)
+Las pruebas de contrato del api estan en [ecommerce-rest-assured](https://github.com/Ale96Glz/ecommerce-rest-assured)
 
 ## Requisitos
 
