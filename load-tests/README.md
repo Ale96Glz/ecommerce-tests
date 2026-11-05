@@ -2,7 +2,7 @@
 
 Este repositorio reúne las simulaciones de Gatling del gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. `mvn gatling:test` corre todas las simulaciones, una después de otra. Cada una deja su reporte en una carpeta propia.
 
-Hoy están la rampa de health, la del listado público de productos y la del detalle de un producto. Las siguientes se agregan en ese paquete, cada una con su clase.
+Hoy están la rampa de health, la del listado público de productos, la del detalle de un producto y el recorrido completo de un usuario. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock.
 
 La cifra de cada corrida es de laboratorio, en la máquina que inyecta, contra el gateway local.
 
@@ -21,6 +21,7 @@ Las pruebas de contrato del api están en [ecommerce-rest-assured](https://githu
 | `sdet.HealthBreakpointSimulation` | Rampa de `GET /actuator/health` |
 | `sdet.CatalogoProductosSimulation` | Rampa de `GET /api/v1/producto` |
 | `sdet.CatalogoProductoSimulation` | Rampa de `GET /api/v1/producto/{id}` |
+| `sdet.ProcesoCompletoSimulation` | Recorrido de registro a pedido pagado |
 
 El reporte de Gatling agrupa por nombre de petición y muestra mínimo, media, percentiles y máximo.
 
@@ -73,6 +74,33 @@ Si el CPU al 100 % es el de la máquina que inyecta y el detalle sigue cumpliend
 
 La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
 
+## Recorrido completo
+
+La simulación es `sdet.ProcesoCompletoSimulation`.
+
+Modelo abierto. Cada usuario entra una vez, recorre el proceso y sale. La entrada sube en línea recta desde cero hasta `load.users` durante `load.ramp.seconds`. La duración máxima es esa rampa más 45 segundos, para que quien entra al final alcance a terminar. Las conexiones se comparten.
+
+El usuario es sintético. DataFaker arma el nombre en español, recortado a 100 caracteres, y una contraseña de 12 a 20 caracteres con mayúscula, dígito y signo. El correo es `sdet-<uuid>@ecommerce.test`. El token del registro queda en la sesión de ese usuario y viaja como `Bearer` en el pedido, la consulta y las notificaciones. Un paso que no cumple el criterio saca al usuario del escenario.
+
+El recorrido, con una pausa de 2 segundos entre acciones:
+
+1. `POST /api/v1/auth/register`. La respuesta tiene que ser 201, con `userId`, rol `USER` y `token`.
+2. `GET /api/v1/producto`. La respuesta tiene que ser 200. Se guarda el `id` del primer producto.
+3. `POST /api/v1/pedido` con una unidad de ese producto. La respuesta tiene que ser 201 y el estado `CREADO`.
+4. `GET /api/v1/pedido/{id}` cada segundo, hasta 20 segundos, mientras el estado siga en `CREADO`. Al salir de esa espera, el estado tiene que ser `PAGADO`.
+5. `GET /api/v1/notificacion/mias`. La respuesta tiene que ser 200 e incluir `PEDIDO_CREADO` y `PAGO_PROCESADO`.
+
+Cada petición tiene que responder en menos de 3 segundos. El pedido pasa a `PAGADO` por el flujo del sistema, después de que pagos procesa el evento. La espera cubre ese tiempo.
+
+Valores de la corrida:
+
+| Propiedad | Valor | Efecto |
+|---|---|---|
+| `load.users` | 500 | Usuarios que entran durante la rampa |
+| `load.ramp.seconds` | 600 | Segundos en los que entran, de menos a más |
+
+Corrida de laboratorio del 5 de noviembre de 2026, con esos valores, contra el gateway local. Entraron 500 usuarios. El ritmo al final de la rampa fue de unos 1,7 por segundo y hubo como mucho unos 12 activos a la vez. Registro y listado respondieron bien las 500 veces. 92 pedidos llegaron a `PAGADO` y vieron las dos notificaciones. 408 recibieron 409 al crear el pedido: el escenario siempre compra el primer producto del listado y ese stock se agotó. La mediana de respuesta fue 12 ms y la máxima 251 ms. El reporte quedó en `target/gatling/procesocompletosimulation-20261105064151934/`.
+
 ## Ejecución
 
 Desde esta carpeta. Corre todas las simulaciones de `src/test/java/sdet/`, una después de otra.
@@ -88,10 +116,16 @@ Para correr una sola, en PowerShell las comillas van en el `-D`:
 mvn gatling:test "-Dgatling.simulationClass=sdet.CatalogoProductoSimulation"
 ```
 
-Para alargar la rampa, las propiedades van en la JVM de Gatling:
+Para alargar una rampa cerrada, las propiedades van en la JVM de Gatling:
 
 ```powershell
-mvn gatling:test '-Dgatling.jvmArgs=-DstepUsers=10 -Dlevels=6 -DlevelSeconds=20'
+mvn gatling:test "-Dgatling.simulationClass=sdet.CatalogoProductosSimulation" "-Dgatling.jvmArgs=-DstepUsers=10 -Dlevels=6 -DlevelSeconds=20"
+```
+
+Para el recorrido completo, los usuarios y la duración de la rampa también van en esa JVM. Sin esas propiedades usa 500 usuarios en 600 segundos:
+
+```powershell
+mvn gatling:test "-Dgatling.simulationClass=sdet.ProcesoCompletoSimulation" "-Dgatling.jvmArgs=-Dload.users=500 -Dload.ramp.seconds=600"
 ```
 
 El reporte queda en `target/gatling/`, en la carpeta de esa corrida. El `index.html` es el gráfico.
