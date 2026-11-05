@@ -2,7 +2,7 @@
 
 Este repositorio reúne las simulaciones de Gatling del gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. `mvn gatling:test` corre todas las simulaciones, una después de otra. Cada una deja su reporte en una carpeta propia.
 
-Hoy están la rampa de health y la del listado público de productos. Las siguientes se agregan en ese paquete, cada una con su clase.
+Hoy están la rampa de health, la del listado público de productos y la del detalle de un producto. Las siguientes se agregan en ese paquete, cada una con su clase.
 
 La cifra de cada corrida es de laboratorio, en la máquina que inyecta, contra el gateway local.
 
@@ -20,6 +20,7 @@ Las pruebas de contrato del api están en [ecommerce-rest-assured](https://githu
 |---|---|
 | `sdet.HealthBreakpointSimulation` | Rampa de `GET /actuator/health` |
 | `sdet.CatalogoProductosSimulation` | Rampa de `GET /api/v1/producto` |
+| `sdet.CatalogoProductoSimulation` | Rampa de `GET /api/v1/producto/{id}` |
 
 El reporte de Gatling agrupa por nombre de petición y muestra mínimo, media, percentiles y máximo.
 
@@ -58,6 +59,20 @@ Si el CPU al 100 % es el de la máquina que inyecta y el listado sigue cumpliend
 
 La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
 
+## Rampa del detalle
+
+La simulación es `sdet.CatalogoProductoSimulation`.
+
+Antes de la rampa lee `GET /api/v1/producto` y se queda con el `id` del primer producto. Esa lectura no entra en la carga. Después pide solo `GET /api/v1/producto/{id}`. No envía token y no escribe. El catálogo tiene que tener al menos un producto.
+
+Modelo cerrado, el mismo del listado: cada usuario permanece y vuelve a pedir ese detalle. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo. Las conexiones se comparten.
+
+Cada respuesta tiene que ser 200, con ese `id` y `nombre` con texto, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, el detalle no trae ese JSON, o la respuesta pasa ese tiempo. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
+
+Si el CPU al 100 % es el de la máquina que inyecta y el detalle sigue cumpliendo el criterio, el límite es el inyector.
+
+La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
+
 ## Ejecución
 
 Desde esta carpeta. Corre todas las simulaciones de `src/test/java/sdet/`, una después de otra.
@@ -70,7 +85,7 @@ mvn gatling:test
 Para correr una sola, en PowerShell las comillas van en el `-D`:
 
 ```powershell
-mvn gatling:test "-Dgatling.simulationClass=sdet.HealthBreakpointSimulation"
+mvn gatling:test "-Dgatling.simulationClass=sdet.CatalogoProductoSimulation"
 ```
 
 Para alargar la rampa, las propiedades van en la JVM de Gatling:
