@@ -32,7 +32,7 @@
         <artifactId>gatling-maven-plugin</artifactId>
         <version>${gatling-maven-plugin.version}</version>
         <configuration>
-          <simulationClass>sdet.HealthBreakpointSimulation</simulationClass>
+          <runMultipleSimulations>true</runMultipleSimulations>
         </configuration>
       </plugin>
     </plugins>
