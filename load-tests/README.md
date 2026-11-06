@@ -2,7 +2,7 @@
 
 Este repositorio reúne las simulaciones de Gatling del gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. `mvn gatling:test` corre todas las simulaciones, una después de otra. Cada una deja su reporte en una carpeta propia.
 
-Hoy están la rampa de health, la del listado público de productos, la del detalle de un producto, el recorrido completo de un usuario y la rampa autenticada de mis pedidos. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. La rampa de mis pedidos registra un usuario para el token y no escribe pedidos.
+Hoy están la rampa de health, la del listado público de productos, la del detalle de un producto, el recorrido completo de un usuario y las rampas autenticadas de mis pedidos y mis pagos. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. Las rampas de mis pedidos y mis pagos registran un usuario para el token y no escriben.
 
 La cifra de cada corrida es de laboratorio, en la máquina que inyecta, contra el gateway local.
 
@@ -23,6 +23,7 @@ Las pruebas de contrato del api están en [ecommerce-rest-assured](https://githu
 | `sdet.CatalogoProductoSimulation` | Rampa de `GET /api/v1/producto/{id}` |
 | `sdet.ProcesoCompletoSimulation` | Recorrido de registro a pedido pagado |
 | `sdet.PedidosMiosSimulation` | Rampa de `GET /api/v1/pedido/mios` |
+| `sdet.PagosMiosSimulation` | Rampa de `GET /api/v1/pago/mios` |
 
 El reporte de Gatling agrupa por nombre de petición y muestra mínimo, media, percentiles y máximo.
 
@@ -82,6 +83,20 @@ La simulación es `sdet.PedidosMiosSimulation`.
 Antes de la rampa registra un usuario y se queda con el `token`. Esa lectura no entra en la carga. Después pide solo `GET /api/v1/pedido/mios` con ese Bearer. No crea pedidos. El listado puede ir vacío: el criterio mira que la respuesta sea un arreglo JSON, no que haya un pedido.
 
 Modelo cerrado, el mismo del catálogo: cada usuario permanece y vuelve a pedir ese listado. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo. Las conexiones se comparten.
+
+Cada respuesta tiene que ser 200 y un arreglo JSON, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, el cuerpo no es un arreglo, o la respuesta pasa ese tiempo. Un 401 es token ausente o inválido. Un 429 es el límite de esa ruta, no una caída del gateway. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
+
+Si el CPU al 100 % es el de la máquina que inyecta y el listado sigue cumpliendo el criterio, el límite es el inyector.
+
+La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
+
+## Rampa de mis pagos
+
+La simulación es `sdet.PagosMiosSimulation`.
+
+Antes de la rampa registra un usuario y se queda con el `token`. Esa lectura no entra en la carga. Después pide solo `GET /api/v1/pago/mios` con ese Bearer. No crea pagos ni pedidos. El listado puede ir vacío: el criterio mira que la respuesta sea un arreglo JSON, no que haya un pago.
+
+Modelo cerrado, el mismo de mis pedidos: cada usuario permanece y vuelve a pedir ese listado. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo. Las conexiones se comparten.
 
 Cada respuesta tiene que ser 200 y un arreglo JSON, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, el cuerpo no es un arreglo, o la respuesta pasa ese tiempo. Un 401 es token ausente o inválido. Un 429 es el límite de esa ruta, no una caída del gateway. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
 
