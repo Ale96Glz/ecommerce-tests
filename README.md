@@ -17,6 +17,7 @@ ecommerce-tests/
 
 - Java Development Kit (JDK) version 21 o superior.
 - Apache Maven version 3.8 o superior.
+- Allure CLI (opcional, para visualizar reportes interactivos).
 
 ## Comandos de Ejecucion
 
@@ -33,9 +34,14 @@ Ejecutar una prueba especifica de API:
 mvn -pl api-tests test "-Dtest=GatewayHealthTest"
 ```
 
-Generar el reporte detallado con Allure:
+Generar el reporte estatico con Maven y Allure:
 ```bash
 mvn -pl api-tests allure:report
+```
+
+Servir el reporte interactivo en tiempo real con Allure CLI:
+```bash
+allure serve api-tests/target/allure-results
 ```
 
 ### 2. Pruebas de Carga y Rendimiento (load-tests)
