@@ -1,0 +1,79 @@
+package sdet;
+
+import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
+import static io.gatling.javaapi.core.CoreDsl.incrementConcurrentUsers;
+import static io.gatling.javaapi.core.CoreDsl.jsonPath;
+import static io.gatling.javaapi.core.CoreDsl.pace;
+import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.http.HttpDsl.http;
+import static io.gatling.javaapi.http.HttpDsl.status;
+
+import io.gatling.javaapi.core.ScenarioBuilder;
+import io.gatling.javaapi.core.Simulation;
+import io.gatling.javaapi.http.HttpProtocolBuilder;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
+
+public class CatalogoProductoSimulation extends Simulation {
+
+  public CatalogoProductoSimulation() {
+    String baseUrl = System.getenv("BASE_URL");
+    if (baseUrl == null || baseUrl.isBlank()) {
+      baseUrl = "https://ecommerce.local";
+    }
+
+    int paceSeconds = Integer.getInteger("paceSeconds", 1);
+    int stepUsers = Integer.getInteger("stepUsers", 5);
+    int levels = Math.max(Integer.getInteger("levels", 4), 2);
+    int levelSeconds = Math.max(Integer.getInteger("levelSeconds", 10), paceSeconds);
+    int rampSeconds = 1;
+    int totalSeconds = levels * levelSeconds + (levels - 1) * rampSeconds + 2;
+
+    AtomicLong productoId = new AtomicLong();
+
+    HttpProtocolBuilder protocolo = http
+        .baseUrl(baseUrl)
+        .shareConnections()
+        .disableWarmUp();
+
+    ScenarioBuilder listado = scenario("Listado")
+        .exec(
+            http("GET /api/v1/producto")
+                .get("/api/v1/producto")
+                .requestTimeout(Duration.ofSeconds(3))
+                .check(status().is(200))
+                .check(jsonPath("$[0].id").ofLong().saveAs("productoId")))
+        .exec(session -> {
+          productoId.set(session.getLong("productoId"));
+          return session;
+        });
+
+    ScenarioBuilder producto = scenario("Producto")
+        .forever()
+        .on(
+            pace(Duration.ofSeconds(paceSeconds))
+                .exec(
+                    http("GET /api/v1/producto/{id}")
+                        .get(session -> "/api/v1/producto/" + productoId.get())
+                        .requestTimeout(Duration.ofSeconds(3))
+                        .check(status().is(200))
+                        .check(jsonPath("$.id").ofLong().is(session -> productoId.get()))
+                        .check(
+                            jsonPath("$.nombre")
+                                .ofString()
+                                .transform(nombre -> !nombre.isBlank())
+                                .is(true))));
+
+    setUp(
+            listado.injectOpen(atOnceUsers(1))
+                .andThen(
+                    producto.injectClosed(
+                        incrementConcurrentUsers(stepUsers)
+                            .times(levels)
+                            .eachLevelLasting(Duration.ofSeconds(levelSeconds))
+                            .separatedByRampsLasting(Duration.ofSeconds(rampSeconds))
+                            .startingFrom(stepUsers))))
+        .protocols(protocolo)
+        .maxDuration(Duration.ofSeconds(totalSeconds + 3));
+  }
+}
