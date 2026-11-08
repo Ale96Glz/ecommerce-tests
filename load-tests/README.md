@@ -2,7 +2,7 @@
 
 Este repositorio reúne las simulaciones de Gatling del gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. `mvn gatling:test` corre todas las simulaciones, una después de otra. Cada una deja su reporte en una carpeta propia.
 
-Hoy están la rampa de health, la del listado público de productos, la del listado paginado, la del detalle de un producto, la del listado público de categorías, el recorrido completo de un usuario y las rampas autenticadas de mis pedidos, mis pagos y mis notificaciones. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. Las rampas de mis pedidos, mis pagos y mis notificaciones registran un usuario para el token y no escriben.
+Hoy están la rampa de health, la del listado público de productos, la del listado paginado, la del detalle de un producto, la del listado público de categorías, el recorrido completo de un usuario y las rampas autenticadas del perfil, mis pedidos, mis pagos y mis notificaciones. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. Las rampas del perfil, mis pedidos, mis pagos y mis notificaciones registran un usuario para el token y no escriben.
 
 La cifra de cada corrida es de laboratorio, en la máquina que inyecta, contra el gateway local.
 
@@ -24,6 +24,7 @@ Las pruebas de contrato del api están en [ecommerce-rest-assured](https://githu
 | `sdet.CatalogoProductoSimulation` | Rampa de `GET /api/v1/producto/{id}` |
 | `sdet.CatalogoCategoriasSimulation` | Rampa de `GET /api/v1/categoria` |
 | `sdet.ProcesoCompletoSimulation` | Recorrido de registro a pedido pagado |
+| `sdet.PerfilUsuarioSimulation` | Rampa de `GET /api/v1/usuario/{id}` |
 | `sdet.PedidosMiosSimulation` | Rampa de `GET /api/v1/pedido/mios` |
 | `sdet.PagosMiosSimulation` | Rampa de `GET /api/v1/pago/mios` |
 | `sdet.NotificacionesMiasSimulation` | Rampa de `GET /api/v1/notificacion/mias` |
@@ -104,6 +105,20 @@ Modelo cerrado, el mismo del listado de productos: cada usuario permanece y vuel
 Cada respuesta tiene que ser 200, con `id` numérico y `nombre` con texto, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, la primera categoría no trae ese JSON, o la respuesta pasa ese tiempo. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
 
 Si el CPU al 100 % es el de la máquina que inyecta y el listado sigue cumpliendo el criterio, el límite es el inyector.
+
+La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
+
+## Rampa del perfil
+
+La simulación es `sdet.PerfilUsuarioSimulation`.
+
+Antes de la rampa registra un usuario y se queda con el `token` y el `userId`. Esa lectura no entra en la carga. Después pide solo `GET /api/v1/usuario/{id}` con ese Bearer. No edita el perfil.
+
+Modelo cerrado, el mismo de mis pedidos: cada usuario permanece y vuelve a pedir ese perfil. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo. Las conexiones se comparten.
+
+Cada respuesta tiene que ser 200, con ese `id`, `nombre` con texto, el `email` del registro y rol `USER`, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, el perfil no trae ese JSON, o la respuesta pasa ese tiempo. Un 401 es token ausente o inválido. Un 429 es el límite de esa ruta, no una caída del gateway. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
+
+Si el CPU al 100 % es el de la máquina que inyecta y el perfil sigue cumpliendo el criterio, el límite es el inyector.
 
 La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
 
