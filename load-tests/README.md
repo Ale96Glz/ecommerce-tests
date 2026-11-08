@@ -2,7 +2,7 @@
 
 Este repositorio reúne las simulaciones de Gatling del gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. `mvn gatling:test` corre todas las simulaciones, una después de otra. Cada una deja su reporte en una carpeta propia.
 
-Hoy están la rampa de health, la del listado público de productos, la del detalle de un producto, la del listado público de categorías, el recorrido completo de un usuario y las rampas autenticadas de mis pedidos, mis pagos y mis notificaciones. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. Las rampas de mis pedidos, mis pagos y mis notificaciones registran un usuario para el token y no escriben.
+Hoy están la rampa de health, la del listado público de productos, la del listado paginado, la del detalle de un producto, la del listado público de categorías, el recorrido completo de un usuario y las rampas autenticadas de mis pedidos, mis pagos y mis notificaciones. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. Las rampas de mis pedidos, mis pagos y mis notificaciones registran un usuario para el token y no escriben.
 
 La cifra de cada corrida es de laboratorio, en la máquina que inyecta, contra el gateway local.
 
@@ -20,6 +20,7 @@ Las pruebas de contrato del api están en [ecommerce-rest-assured](https://githu
 |---|---|
 | `sdet.HealthBreakpointSimulation` | Rampa de `GET /actuator/health` |
 | `sdet.CatalogoProductosSimulation` | Rampa de `GET /api/v1/producto` |
+| `sdet.CatalogoProductosPageableSimulation` | Rampa de `GET /api/v1/producto/pageable` |
 | `sdet.CatalogoProductoSimulation` | Rampa de `GET /api/v1/producto/{id}` |
 | `sdet.CatalogoCategoriasSimulation` | Rampa de `GET /api/v1/categoria` |
 | `sdet.ProcesoCompletoSimulation` | Recorrido de registro a pedido pagado |
@@ -61,6 +62,20 @@ Modelo cerrado, el mismo de health: cada usuario permanece y vuelve a pedir el l
 Cada respuesta tiene que ser 200, con `id` numérico y `nombre` con texto, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, el primer producto no trae ese JSON, o la respuesta pasa ese tiempo. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
 
 Si el CPU al 100 % es el de la máquina que inyecta y el listado sigue cumpliendo el criterio, el límite es el inyector.
+
+La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
+
+## Rampa del catálogo paginado
+
+La simulación es `sdet.CatalogoProductosPageableSimulation`.
+
+Pide una página pública de productos, `page=0` y `size=1`. No envía token y no escribe. El catálogo tiene que tener al menos un producto: el criterio mira el primero de `content`.
+
+Modelo cerrado, el mismo del listado: cada usuario permanece y vuelve a pedir esa página. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo. Las conexiones se comparten.
+
+Cada respuesta tiene que ser 200, con `page` 0, `size` 1, `id` numérico y `nombre` con texto en el primer ítem de `content`, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, la página no trae ese JSON, o la respuesta pasa ese tiempo. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
+
+Si el CPU al 100 % es el de la máquina que inyecta y la página sigue cumpliendo el criterio, el límite es el inyector.
 
 La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
 
