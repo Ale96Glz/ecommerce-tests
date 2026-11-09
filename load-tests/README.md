@@ -2,7 +2,7 @@
 
 Este repositorio reúne las simulaciones de Gatling del gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. `mvn gatling:test` corre todas las simulaciones, una después de otra. Cada una deja su reporte en una carpeta propia.
 
-Hoy están la rampa de health, la del listado público de productos, la del listado paginado, la del detalle de un producto, la del listado público de categorías, el recorrido completo de un usuario y las rampas autenticadas del perfil, mis pedidos, mis pagos y mis notificaciones. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. Las rampas del perfil, mis pedidos, mis pagos y mis notificaciones registran un usuario para el token y no escriben.
+Hoy están la rampa de health, la del listado público de productos, la del listado paginado, la del detalle de un producto, la del listado público de categorías, el recorrido completo de un usuario y las rampas autenticadas del perfil, mis pedidos, mis pagos, mis notificaciones y las no leídas. Las siguientes se agregan en ese paquete, cada una con su clase. El recorrido completo registra usuarios y crea pedidos: cada corrida descuenta stock. Las rampas del perfil, mis pedidos, mis pagos, mis notificaciones y las no leídas registran un usuario para el token y no escriben.
 
 La cifra de cada corrida es de laboratorio, en la máquina que inyecta, contra el gateway local.
 
@@ -28,6 +28,7 @@ Las pruebas de contrato del api están en [ecommerce-rest-assured](https://githu
 | `sdet.PedidosMiosSimulation` | Rampa de `GET /api/v1/pedido/mios` |
 | `sdet.PagosMiosSimulation` | Rampa de `GET /api/v1/pago/mios` |
 | `sdet.NotificacionesMiasSimulation` | Rampa de `GET /api/v1/notificacion/mias` |
+| `sdet.NotificacionesNoLeidasSimulation` | Rampa de `GET /api/v1/notificacion/usuario/{id}/no-leidas` |
 
 El reporte de Gatling agrupa por nombre de petición y muestra mínimo, media, percentiles y máximo.
 
@@ -157,6 +158,20 @@ La simulación es `sdet.NotificacionesMiasSimulation`.
 Antes de la rampa registra un usuario y se queda con el `token`. Esa lectura no entra en la carga. Después pide solo `GET /api/v1/notificacion/mias` con ese Bearer. No crea pedidos ni notificaciones. El listado puede ir vacío: el criterio mira que la respuesta sea un arreglo JSON, no que haya una notificación.
 
 Modelo cerrado, el mismo de mis pagos: cada usuario permanece y vuelve a pedir ese listado. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo. Las conexiones se comparten.
+
+Cada respuesta tiene que ser 200 y un arreglo JSON, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, el cuerpo no es un arreglo, o la respuesta pasa ese tiempo. Un 401 es token ausente o inválido. Un 429 es el límite de esa ruta, no una caída del gateway. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
+
+Si el CPU al 100 % es el de la máquina que inyecta y el listado sigue cumpliendo el criterio, el límite es el inyector.
+
+La corrida corta usa las mismas propiedades y los mismos valores que la rampa de health.
+
+## Rampa de no leídas
+
+La simulación es `sdet.NotificacionesNoLeidasSimulation`.
+
+Antes de la rampa registra un usuario y se queda con el `token` y el `userId`. Esa lectura no entra en la carga. Después pide solo `GET /api/v1/notificacion/usuario/{id}/no-leidas` con ese Bearer. No crea pedidos ni notificaciones. El listado puede ir vacío: el criterio mira que la respuesta sea un arreglo JSON, no que haya una no leída.
+
+Modelo cerrado, el mismo de mis notificaciones: cada usuario permanece y vuelve a pedir ese listado. El ritmo va dentro del bucle y la duración máxima corta la corrida. Los peldaños son chicos y el tope de usuarios llega al final. Cada peldaño dura al menos el ritmo. Las conexiones se comparten.
 
 Cada respuesta tiene que ser 200 y un arreglo JSON, en menos de 3 segundos. El quiebre es el primer peldaño en el que falta el 200, el cuerpo no es un arreglo, o la respuesta pasa ese tiempo. Un 401 es token ausente o inválido. Un 429 es el límite de esa ruta, no una caída del gateway. La corrida sigue hasta el final. El punto se lee en el gráfico de usuarios activos contra latencia y errores.
 
