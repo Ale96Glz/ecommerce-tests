@@ -331,6 +331,40 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un monto distinto al del pedido queda procesado")
+  @DisplayName("Un monto distinto al del pedido queda procesado")
+  @Description("POST /api/v1/pago con un monto distinto al total del pedido, por debajo del máximo, responde 201 con estado PROCESADO.")
+  void unMontoDistintoAlDelPedidoQuedaProcesado() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      double total = totalDelPedido(sesion, pedidoId);
+      double distinto = total + 1;
+      if (distinto >= 100) {
+        distinto = Math.max(total - 1, 0.01);
+      }
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", distinto))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("pedidoId", equalTo(pedidoId))
+          .body("usuarioId", equalTo(sesion.id()))
+          .body("estado", equalTo("PROCESADO"))
+          .body("monto", equalTo((float) distinto));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("Pagar de nuevo un pedido pagado recibe 409")
   @DisplayName("Pagar de nuevo un pedido pagado recibe 409")
   @Description("POST /api/v1/pago de un pedido ya pagado responde 409 con el mensaje El pedido ya está pagado.")
@@ -515,6 +549,27 @@ class PagosTest extends GatewayTest {
       }
     }
     throw new IllegalStateException("No hay un producto con stock");
+  }
+
+  private static double totalDelPedido(Sesion sesion, Number pedidoId) {
+    Response pedido = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/pedido/" + pedidoId);
+    pedido.then().statusCode(200);
+    Number total = pedido.path("total");
+    if (total != null) {
+      return total.doubleValue();
+    }
+    Number productoId = pedido.path("items[0].productoId");
+    Number precio = given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("precio");
+    return precio.doubleValue();
   }
 
   private static Number crearPedido(Sesion sesion, Number productoId) {

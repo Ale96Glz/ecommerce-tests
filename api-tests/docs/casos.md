@@ -112,11 +112,14 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Los pedidos del usuario con token inválido reciben 401 | `Token inválido o expirado` |
 | Un pedido por id con token inválido recibe 401 | `Token inválido o expirado` |
 | Crear un pedido descuenta el stock | 201, estado `CREADO` y el stock baja una unidad |
+| Un pedido de dos unidades descuenta el stock | 201, estado `CREADO` y el stock baja dos unidades |
+| Pedir más unidades que el stock recibe 409 | `Stock insuficiente para el producto` y el stock no cambia |
 | Pedir un producto inexistente recibe 404 | `No existe el producto con id` |
 | Un usuario ve su pedido por id | 200, estado `CREADO` |
 | Un usuario no puede ver un pedido ajeno | 403, `No puedes acceder a recursos de otro usuario` |
 | Un usuario no puede cancelar un pedido ajeno | 403, `No puedes acceder a recursos de otro usuario` |
 | Cancelar un pedido creado repone el stock | 200, estado `CANCELADO` y el stock vuelve |
+| Cancelar un pedido de dos unidades repone el stock | 200, estado `CANCELADO` y vuelven las dos unidades |
 | El pedido creado aparece en los míos | 200, el id está en el arreglo |
 | Reactivar un pedido cancelado por el usuario recibe 409 | motivo de cancelación `USUARIO` |
 | El pedido pagado pasa a PAGADO | 200, estado `PAGADO` |
@@ -150,6 +153,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un pago por id con token inválido recibe 401 | `Token inválido o expirado` |
 | Pagar el pedido de otro usuario recibe 403 | `El pedido con id` no pertenece al usuario autenticado |
 | Un usuario paga su pedido | 201, estado `PROCESADO` |
+| Un monto distinto al del pedido queda procesado | 201, estado `PROCESADO` (el monto no se valida contra el total). Hallazgo [H-PAGO-01](hallazgos.md#h-pago-01--el-monto-del-pago-no-se-valida-contra-el-total-del-pedido) |
 | El pago procesado aparece en los míos | 200, el id está en el arreglo |
 | Un usuario ve su pago por id | 200, ese pago en estado `PROCESADO` |
 | Un usuario ve el pago de su pedido | 200, el pago de ese pedido en estado `PROCESADO` |
