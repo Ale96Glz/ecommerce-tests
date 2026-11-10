@@ -538,6 +538,39 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Cancelar un pedido de dos unidades repone el stock")
+  @DisplayName("Cancelar un pedido de dos unidades repone el stock")
+  @Description("PUT /api/v1/pedido/{id}/cancelar de un pedido con cantidad 2 responde 200 CANCELADO y el stock vuelve las dos unidades.")
+  void cancelarUnPedidoDeDosUnidadesReponeElStock() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock(2);
+    int antes = stockDe(productoId);
+    Number pedidoId = given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 2))))
+        .when()
+        .post("/api/v1/pedido")
+        .then()
+        .statusCode(201)
+        .extract()
+        .path("id");
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar")
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("id", equalTo(pedidoId))
+        .body("estado", equalTo("CANCELADO"))
+        .body("motivoCancelacion", equalTo("USUARIO"));
+
+    esperarStock(productoId, antes);
+  }
+
+  @Test
   @Story("El pedido creado aparece en los míos")
   @DisplayName("El pedido creado aparece en los míos")
   @Description("GET /api/v1/pedido/mios incluye el pedido recién creado.")
