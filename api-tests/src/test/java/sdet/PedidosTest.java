@@ -390,6 +390,40 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Pedir más unidades que el stock recibe 409")
+  @DisplayName("Pedir más unidades que el stock recibe 409")
+  @Description("POST /api/v1/pedido con cantidad mayor al stock responde 409 con Stock insuficiente y el stock no cambia.")
+  void pedirMasUnidadesQueElStockRecibe409() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    int disponible = stockDe(productoId);
+    int solicitado = disponible + 1;
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", solicitado))))
+        .when()
+        .post("/api/v1/pedido")
+        .then()
+        .statusCode(409)
+        .contentType(containsString("json"))
+        .body("status", equalTo(409))
+        .body("error", equalTo("Conflict"))
+        .body("message", equalTo(
+            "Stock insuficiente para el producto " + productoId
+                + ". Disponible: " + disponible
+                + ", solicitado: " + solicitado));
+
+    given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .body("stock", equalTo(disponible));
+  }
+
+  @Test
   @Story("Pedir un producto inexistente recibe 404")
   @DisplayName("Pedir un producto inexistente recibe 404")
   @Description("POST /api/v1/pedido de un producto ausente responde 404 con el mensaje No existe el producto con id.")
