@@ -12,7 +12,7 @@ Las cifras son de la máquina que inyecta, contra `BASE_URL`. Las pruebas de con
 
 No correr carga y API a la vez contra el mismo gateway: el rate limit las pisa. Login y registro: 1/s, ráfaga 5. Rutas autenticadas: ráfaga 20. Health no entra en el límite. Un 429 es el límite, no una caída.
 
-`mvn gatling:test` corre **todas** las simulaciones, una detrás de otra. El recorrido completo, la saga y el stock **escriben** y descuentan inventario.
+`mvn gatling:test` corre **todas** las simulaciones, una detrás de otra. El recorrido completo, la saga y las de stock **escriben** y descuentan inventario.
 
 ## Ejecución
 
