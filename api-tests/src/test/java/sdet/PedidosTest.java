@@ -353,6 +353,43 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un pedido de dos unidades descuenta el stock")
+  @DisplayName("Un pedido de dos unidades descuenta el stock")
+  @Description("POST /api/v1/pedido con cantidad 2 responde 201 con estado CREADO y el stock del producto baja dos unidades.")
+  void unPedidoDeDosUnidadesDescuentaElStock() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock(2);
+    int antes = stockDe(productoId);
+    Number pedidoId = null;
+    try {
+      pedidoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 2))))
+          .when()
+          .post("/api/v1/pedido")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("id", instanceOf(Number.class))
+          .body("usuarioId", equalTo(sesion.id()))
+          .body("estado", equalTo("CREADO"))
+          .body("items[0].cantidad", equalTo(2))
+          .extract()
+          .path("id");
+
+      given()
+          .when()
+          .get("/api/v1/producto/" + productoId)
+          .then()
+          .statusCode(200)
+          .body("stock", equalTo(antes - 2));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("Pedir un producto inexistente recibe 404")
   @DisplayName("Pedir un producto inexistente recibe 404")
   @Description("POST /api/v1/pedido de un producto ausente responde 404 con el mensaje No existe el producto con id.")
@@ -673,6 +710,10 @@ class PedidosTest extends GatewayTest {
   }
 
   private static Number productoConStock() {
+    return productoConStock(1);
+  }
+
+  private static Number productoConStock(int minimo) {
     List<Map<String, Object>> productos = given()
         .when()
         .get("/api/v1/producto")
@@ -683,11 +724,11 @@ class PedidosTest extends GatewayTest {
         .getList("");
     for (Map<String, Object> producto : productos) {
       int stock = ((Number) producto.get("stock")).intValue();
-      if (stock >= 1 && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+      if (stock >= minimo && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
         return (Number) producto.get("id");
       }
     }
-    throw new IllegalStateException("No hay un producto con stock");
+    throw new IllegalStateException("No hay un producto con stock de al menos " + minimo);
   }
 
   private static int stockDe(Number productoId) {
