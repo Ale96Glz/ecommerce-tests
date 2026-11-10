@@ -143,3 +143,17 @@ Sin propiedades: 30 pedidos a la vez. La ráfaga autenticada es 20; el resto pue
 | 5xx | Fallo |
 
 201 y 409 cumplen el criterio de Gatling. Hay que reponer el producto entre corridas.
+
+### Contención de stock entre clientes — `sdet.StockClientesSimulation`
+
+Misma pregunta de inventario, distinto aislamiento: **un comprador por pedido**.
+
+No crea productos. Usa el primero del catálogo.
+
+Setup (fuera de la carga): `GET /api/v1/producto` y `load.users` registros, **uno por segundo** (`paceSeconds`, por defecto 1), para no pegarle al límite de identidad (1/s, ráfaga 5). Cada registro 201 deja un `token` propio. Un 429 aquí aborta ese alta: no se dispara un pedido sin cuenta.
+
+Carga: esos mismos N usuarios disparan a la vez `POST /api/v1/pedido`, cada uno con **su** Bearer, una unidad del **mismo** producto.
+
+Sin propiedades: 20 clientes. Coincide con la ráfaga autenticada. Más allá, un 429 en el pedido es el límite de la ruta, no el stock.
+
+Los códigos de `POST /pedido` se leen igual que en `StockConcurrenteSimulation`. Esta corrida crea N usuarios y descuenta stock. Reponer el producto entre corridas.
