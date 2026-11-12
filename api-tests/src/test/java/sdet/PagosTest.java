@@ -416,6 +416,57 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Tras un monto distinto el total exacto queda procesado")
+  @DisplayName("Tras un monto distinto el total exacto queda procesado")
+  @Description("Tras un 409 por monto distinto, POST /api/v1/pago con el total del pedido responde 201 PROCESADO y el pedido sigue pagable.")
+  void trasUnMontoDistintoElTotalExactoQuedaProcesado() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      double total = totalDelPedido(sesion, pedidoId);
+      double distinto = total + 1;
+      if (distinto >= 100) {
+        distinto = Math.max(total - 1, 0.01);
+      }
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", distinto))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(409);
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .body("estado", equalTo("CREADO"));
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", total))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("pedidoId", equalTo(pedidoId))
+          .body("usuarioId", equalTo(sesion.id()))
+          .body("estado", equalTo("PROCESADO"))
+          .body("monto", equalTo((float) total));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("Pagar un pedido cancelado recibe 409")
   @DisplayName("Pagar un pedido cancelado recibe 409")
   @Description("POST /api/v1/pago de un pedido CANCELADO por el usuario, con el total del pedido, responde 409 y el pedido sigue CANCELADO.")

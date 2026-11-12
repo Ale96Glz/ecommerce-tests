@@ -155,6 +155,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario paga su pedido | 201, estado `PROCESADO` |
 | Un monto distinto al del pedido recibe 409 | `El monto no coincide con el total del pedido`; el pedido sigue `CREADO` |
 | Un monto menor al del pedido recibe 409 | `El monto no coincide con el total del pedido`; el pedido sigue `CREADO` |
+| Tras un monto distinto el total exacto queda procesado | 409 y el pedido sigue `CREADO`; luego 201 `PROCESADO` con el total |
 | Pagar un pedido cancelado recibe 409 | `El pedido con id` no está en estado `CREADO` (estado actual: `CANCELADO`); el pedido sigue `CANCELADO` |
 | El pago procesado aparece en los míos | 200, el id está en el arreglo |
 | Un usuario ve su pago por id | 200, ese pago en estado `PROCESADO` |
