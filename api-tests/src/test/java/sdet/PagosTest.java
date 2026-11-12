@@ -331,10 +331,10 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
-  @Story("Un monto distinto al del pedido queda procesado")
-  @DisplayName("Un monto distinto al del pedido queda procesado")
-  @Description("POST /api/v1/pago con un monto distinto al total del pedido, por debajo del máximo, responde 201 con estado PROCESADO.")
-  void unMontoDistintoAlDelPedidoQuedaProcesado() {
+  @Story("Un monto distinto al del pedido recibe 409")
+  @DisplayName("Un monto distinto al del pedido recibe 409")
+  @Description("POST /api/v1/pago con un monto distinto al total del pedido, por debajo del máximo, responde 409 y el pedido sigue CREADO.")
+  void unMontoDistintoAlDelPedidoRecibe409() {
     Sesion sesion = sesionNueva();
     Number productoId = productoConStock();
     Number pedidoId = null;
@@ -353,12 +353,19 @@ class PagosTest extends GatewayTest {
           .when()
           .post("/api/v1/pago")
           .then()
-          .statusCode(201)
+          .statusCode(409)
           .contentType(containsString("json"))
-          .body("pedidoId", equalTo(pedidoId))
-          .body("usuarioId", equalTo(sesion.id()))
-          .body("estado", equalTo("PROCESADO"))
-          .body("monto", equalTo((float) distinto));
+          .body("status", equalTo(409))
+          .body("error", equalTo("Conflict"))
+          .body("message", equalTo("El monto no coincide con el total del pedido"));
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .body("estado", equalTo("CREADO"));
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }

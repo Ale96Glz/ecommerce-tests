@@ -58,3 +58,5 @@ mvn allure:serve
 ## Casos
 
 Los casos y su resultado están en [docs/casos.md](docs/casos.md).
+
+Los defectos de negocio (contrato actual vs esperado) están en [docs/hallazgos.md](docs/hallazgos.md).
