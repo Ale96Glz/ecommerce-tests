@@ -372,6 +372,48 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Pagar un pedido cancelado recibe 409")
+  @DisplayName("Pagar un pedido cancelado recibe 409")
+  @Description("POST /api/v1/pago de un pedido CANCELADO por el usuario, con el total del pedido, responde 409 y el pedido sigue CANCELADO.")
+  void pagarUnPedidoCanceladoRecibe409() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = crearPedido(sesion, productoId);
+    double total = totalDelPedido(sesion, pedidoId);
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar")
+        .then()
+        .statusCode(200)
+        .body("estado", equalTo("CANCELADO"));
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType("application/json")
+        .body(Map.of("pedidoId", pedidoId, "monto", total))
+        .when()
+        .post("/api/v1/pago")
+        .then()
+        .statusCode(409)
+        .contentType(containsString("json"))
+        .body("status", equalTo(409))
+        .body("error", equalTo("Conflict"))
+        .body("message", equalTo(
+            "El pedido con id " + pedidoId + " no está en estado CREADO (estado actual: CANCELADO)"));
+
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/pedido/" + pedidoId)
+        .then()
+        .statusCode(200)
+        .body("estado", equalTo("CANCELADO"))
+        .body("motivoCancelacion", equalTo("USUARIO"));
+  }
+
+  @Test
   @Story("Pagar de nuevo un pedido pagado recibe 409")
   @DisplayName("Pagar de nuevo un pedido pagado recibe 409")
   @Description("POST /api/v1/pago de un pedido ya pagado responde 409 con el mensaje El pedido ya está pagado.")
