@@ -372,6 +372,50 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un monto menor al del pedido recibe 409")
+  @DisplayName("Un monto menor al del pedido recibe 409")
+  @Description("POST /api/v1/pago con un monto menor al total del pedido, mayor a 0, responde 409 y el pedido sigue CREADO.")
+  void unMontoMenorAlDelPedidoRecibe409() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock();
+    Number pedidoId = null;
+    try {
+      pedidoId = crearPedido(sesion, productoId);
+      double total = totalDelPedido(sesion, pedidoId);
+      double menor = total - 1;
+      if (menor <= 0) {
+        menor = 0.01;
+      }
+      if (menor >= total) {
+        throw new IllegalStateException("No hay un monto menor válido para el total " + total);
+      }
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", menor))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(409)
+          .contentType(containsString("json"))
+          .body("status", equalTo(409))
+          .body("error", equalTo("Conflict"))
+          .body("message", equalTo("El monto no coincide con el total del pedido"));
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .body("estado", equalTo("CREADO"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("Pagar un pedido cancelado recibe 409")
   @DisplayName("Pagar un pedido cancelado recibe 409")
   @Description("POST /api/v1/pago de un pedido CANCELADO por el usuario, con el total del pedido, responde 409 y el pedido sigue CANCELADO.")
