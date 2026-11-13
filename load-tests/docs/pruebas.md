@@ -51,7 +51,7 @@ La cifra describe el health. Catálogo, identidad y pedidos se miden en sus esce
 
 ### Detalle — `sdet.CatalogoProductoSimulation`
 
-Antes de la rampa lee el listado y se queda con el `id` del primer producto. Esa lectura no entra en la carga. Después solo `GET /api/v1/producto/{id}`. Público. No escribe.
+Antes de la rampa lee el listado y se queda con el `id` del primer producto activo con stock. Esa lectura no entra en la carga. Después solo `GET /api/v1/producto/{id}`. Público. No escribe.
 
 200, ese `id` y `nombre` con texto, en menos de 3 segundos.
 
@@ -108,14 +108,14 @@ Cada usuario entra con rampa desde cero hasta `load.users` durante `load.ramp.se
 Pausa de 2 segundos entre acciones:
 
 1. `POST /api/v1/auth/register` — 201, `userId`, rol `USER`, `token`.
-2. `GET /api/v1/producto` — 200. Se guarda el `id` del primero.
+2. `GET /api/v1/producto` — 200. Se guarda el `id` del primero activo, con stock y precio ≤ 100 (el tope de pago).
 3. `POST /api/v1/pedido` con una unidad — 201 y estado `CREADO`.
 4. `GET /api/v1/pedido/{id}` cada segundo, hasta 20 segundos, mientras siga `CREADO`. Al salir tiene que ser `PAGADO`.
 5. `GET /api/v1/notificacion/mias` — 200, con `PEDIDO_CREADO` y `PAGO_PROCESADO`.
 
 Cada petición en menos de 3 segundos. El pago lo cierra el flujo del sistema; la espera cubre ese tiempo.
 
-Sin propiedades: 500 usuarios en 600 segundos. El escenario compra siempre el primer producto: cuando se acaba el stock, `POST /pedido` responde 409.
+Sin propiedades: 500 usuarios en 600 segundos. El escenario compra siempre el primer producto pagable (activo, con stock y precio ≤ 100): cuando se acaba el stock, `POST /pedido` responde 409.
 
 Corrida del 5 de noviembre de 2026, gateway local, esos valores: 500 registros y listados bien. 92 pedidos `PAGADO` con las dos notificaciones. 408 con 409. Mediana 12 ms, máxima 251 ms. Reporte: `target/gatling/procesocompletosimulation-20261105064151934/`.
 
@@ -127,7 +127,7 @@ Sin propiedades: 20 usuarios en 60 segundos. `load.users` y `load.ramp.seconds` 
 
 ### Contención de stock — `sdet.StockConcurrenteSimulation`
 
-No crea productos. Usa el primero del catálogo.
+No crea productos. Usa el primer producto activo con stock.
 
 Setup (fuera de la carga): `GET /api/v1/producto` y un registro. Se guarda `productoId` y `token`. Un 429 en ese registro sería el límite de identidad.
 
@@ -148,7 +148,7 @@ Sin propiedades: 30 pedidos a la vez. La ráfaga autenticada es 20; el resto pue
 
 Misma pregunta de inventario, distinto aislamiento: **un comprador por pedido**.
 
-No crea productos. Usa el primero del catálogo.
+No crea productos. Usa el primer producto activo con stock.
 
 Setup (fuera de la carga): `GET /api/v1/producto` y `load.users` registros, **uno por segundo** (`paceSeconds`, por defecto 1), para no pegarle al límite de identidad (1/s, ráfaga 5). Cada registro 201 deja un `token` propio. Un 429 aquí aborta ese alta: no se dispara un pedido sin cuenta.
 
@@ -157,3 +157,32 @@ Carga: esos mismos N usuarios disparan a la vez `POST /api/v1/pedido`, cada uno 
 Sin propiedades: 20 clientes. Coincide con la ráfaga autenticada. Más allá, un 429 en el pedido es el límite de la ruta, no el stock.
 
 Los códigos de `POST /pedido` se leen igual que en `StockConcurrenteSimulation`. Esta corrida crea N usuarios y descuenta stock. Reponer el producto entre corridas.
+
+## Corrida base del 12 de noviembre de 2026
+
+Gateway local, las 15 simulaciones corridas una por una para que un fallo no oculte a las demás. Rampas cerradas con los valores por defecto (pico de 20 usuarios); recorridos abiertos con los suyos, salvo el completo.
+
+| Escenario | Escala | Peticiones | OK | KO | p95 (ms) | p99 (ms) | Máx (ms) |
+|---|---|---|---|---|---|---|---|
+| Health | 20 usuarios | 585 | 585 | 0 | 7 | 453 | 953 |
+| Catálogo productos | 20 usuarios | 585 | 585 | 0 | 9 | 15 | 136 |
+| Catálogo paginado | 20 usuarios | 585 | 585 | 0 | 8 | 11 | 178 |
+| Detalle | 20 usuarios | 626 | 626 | 0 | 6 | 11 | 136 |
+| Categorías | 20 usuarios | 585 | 585 | 0 | 7 | 10 | 130 |
+| Perfil | 20 usuarios | 666 | 666 | 0 | 11 | 702 | 1 058 |
+| Existe | 20 usuarios | 666 | 666 | 0 | 9 | 23 | 200 |
+| Mis pedidos | 20 usuarios | 666 | 666 | 0 | 8 | 12 | 153 |
+| Mis pagos | 20 usuarios | 666 | 666 | 0 | 8 | 12 | 171 |
+| Mis notificaciones | 20 usuarios | 666 | 666 | 0 | 9 | 18 | 173 |
+| No leídas | 20 usuarios | 666 | 666 | 0 | 8 | 12 | 211 |
+| Recorrido completo | 10 usuarios / 10 s | 93 | 90 | 3 | 64 | 166 | 166 |
+| Saga de checkout | 20 usuarios / 60 s | 251 | 251 | 0 | 62 | 98 | 206 |
+| Stock clientes | 20 clientes | 41 | 41 | 0 | 193 | 193 | 193 |
+| Stock concurrente | 50 usuarios | 52 | 42 | 10 | 485 | 487 | 487 |
+
+Notas de esa corrida:
+
+- Solo la saga de checkout tiene aserciones. Las otras 14 terminan en `BUILD SUCCESS` aunque tengan KO: ese es el hueco que cierra el paso de aserciones.
+- Los 3 KO del recorrido completo son 429 en el listado, residuo del límite de la corrida anterior; 7 de 10 usuarios llegaron al pedido. No es falta de capacidad.
+- Los 10 KO de stock concurrente son 429 en `POST /pedido`: 50 a la vez supera la ráfaga autenticada de 20. El check solo acepta 201/409, así que el 429 cuenta como KO. El código usa 50 por defecto y esta guía decía 30: falta decidir la escala.
+- Stock al terminar: productos 5 y 7 agotados; 1 con 1, 2 con 19, 3 con 26, 4 con 41 y 6 con 5. Reponer antes de otra corrida que compre.

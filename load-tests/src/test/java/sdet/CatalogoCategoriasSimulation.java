@@ -4,6 +4,7 @@ import static io.gatling.javaapi.core.CoreDsl.incrementConcurrentUsers;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
 import static io.gatling.javaapi.core.CoreDsl.pace;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
@@ -56,6 +57,9 @@ public class CatalogoCategoriasSimulation extends Simulation {
                     .separatedByRampsLasting(Duration.ofSeconds(rampSeconds))
                     .startingFrom(stepUsers)))
         .protocols(protocolo)
+        .assertions(
+            global().responseTime().max().lt(3000),
+            global().failedRequests().percent().lt(5.0))
         .maxDuration(Duration.ofSeconds(totalSeconds));
   }
 }
