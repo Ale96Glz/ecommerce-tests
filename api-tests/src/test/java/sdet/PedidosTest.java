@@ -775,20 +775,11 @@ class PedidosTest extends GatewayTest {
   @Description("Tras un pago PROCESADO, GET /api/v1/pedido/{id} responde 200 con estado PAGADO.")
   void pedidoPagadoPasaAPagado() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201);
-
       esperarEstado(sesion, pedidoId, "PAGADO", null);
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
@@ -801,19 +792,11 @@ class PedidosTest extends GatewayTest {
   @Description("PUT /api/v1/pedido/{id}/cancelar de un pedido PAGADO responde 409 porque está en estado PAGADO.")
   void cancelarUnPedidoPagadoRecibe409() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201);
       esperarEstado(sesion, pedidoId, "PAGADO", null);
 
       given()
@@ -839,15 +822,6 @@ class PedidosTest extends GatewayTest {
   void pedidoConPagoRechazadoQuedaCancelado() throws InterruptedException {
     Sesion sesion = sesionNueva();
     PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
-    given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .contentType("application/json")
-        .body(Map.of("pedidoId", pedido.pedidoId(), "monto", pedido.total()))
-        .when()
-        .post("/api/v1/pago")
-        .then()
-        .statusCode(201);
-
     esperarEstado(sesion, pedido.pedidoId(), "CANCELADO", "PAGO_RECHAZADO");
     esperarStock(pedido.productoId(), pedido.stockAntes());
   }
@@ -862,14 +836,6 @@ class PedidosTest extends GatewayTest {
     Number productoId = pedido.productoId();
     Number pedidoId = pedido.pedidoId();
     try {
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", pedido.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201);
       esperarEstado(sesion, pedidoId, "CANCELADO", "PAGO_RECHAZADO");
 
       given()
@@ -884,43 +850,6 @@ class PedidosTest extends GatewayTest {
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
-  }
-
-  private static void esperarEstado(Sesion sesion, Number pedidoId, String estado, String motivo)
-      throws InterruptedException {
-    for (int intento = 0; intento < 20; intento++) {
-      Response respuesta = given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .when()
-          .get("/api/v1/pedido/" + pedidoId);
-      if (respuesta.statusCode() == 200
-          && estado.equals(respuesta.path("estado"))
-          && (motivo == null || motivo.equals(respuesta.path("motivoCancelacion")))) {
-        break;
-      }
-      Thread.sleep(1000);
-    }
-    given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .when()
-        .get("/api/v1/pedido/" + pedidoId)
-        .then()
-        .statusCode(200)
-        .contentType(containsString("json"))
-        .body("estado", equalTo(estado))
-        .body("motivoCancelacion", motivo == null ? nullValue() : equalTo(motivo));
-  }
-
-  private static void esperarStock(Number productoId, int esperado) throws InterruptedException {
-    for (int intento = 0; intento < 20 && stockDe(productoId) != esperado; intento++) {
-      Thread.sleep(1000);
-    }
-    given()
-        .when()
-        .get("/api/v1/producto/" + productoId)
-        .then()
-        .statusCode(200)
-        .body("stock", equalTo(esperado));
   }
 
   private static Number productoConStock() {
@@ -989,16 +918,6 @@ class PedidosTest extends GatewayTest {
       }
     }
     throw new IllegalStateException("No hay un producto con stock de al menos " + minimo);
-  }
-
-  private static int stockDe(Number productoId) {
-    return given()
-        .when()
-        .get("/api/v1/producto/" + productoId)
-        .then()
-        .statusCode(200)
-        .extract()
-        .path("stock");
   }
 
   private static Number crearPedido(Sesion sesion, Number productoId) {

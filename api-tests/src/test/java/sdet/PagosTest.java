@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -282,7 +283,7 @@ class PagosTest extends GatewayTest {
   void pagarElPedidoDeOtroUsuarioRecibe403() {
     Sesion dueno = sesionNueva();
     Sesion ajeno = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(dueno, productoId);
@@ -305,28 +306,24 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
-  @Story("Un usuario paga su pedido")
-  @DisplayName("Un usuario paga su pedido")
-  @Description("POST /api/v1/pago del propio pedido en CREADO responde 201 con estado PROCESADO.")
-  void usuarioPagaSuPedido() {
+  @Story("El sistema paga el pedido automáticamente")
+  @DisplayName("El sistema paga el pedido automáticamente")
+  @Description("Al crear el pedido, el sistema crea su pago PROCESADO por el total y el pedido pasa a PAGADO.")
+  void elSistemaPagaElPedidoAutomaticamente() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
+      esperarPago(sesion, pedidoId, "PROCESADO")
           .then()
-          .statusCode(201)
           .contentType(containsString("json"))
           .body("pedidoId", equalTo(pedidoId))
           .body("usuarioId", equalTo(sesion.id()))
-          .body("estado", equalTo("PROCESADO"));
+          .body("estado", equalTo("PROCESADO"))
+          .body("monto", equalTo((float) creado.total().doubleValue()));
+      esperarEstado(sesion, pedidoId, "PAGADO", null);
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
@@ -335,14 +332,15 @@ class PagosTest extends GatewayTest {
   @Test
   @Story("Un monto distinto al del pedido recibe 409")
   @DisplayName("Un monto distinto al del pedido recibe 409")
-  @Description("POST /api/v1/pago con un monto distinto al total del pedido, por debajo del máximo, responde 409 y el pedido sigue CREADO.")
-  void unMontoDistintoAlDelPedidoRecibe409() {
+  @Description("POST /api/v1/pago con un monto distinto al total responde 409 y el pago del sistema queda PROCESADO por el total correcto.")
+  void unMontoDistintoAlDelPedidoRecibe409() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
-      double total = totalDelPedido(sesion, pedidoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
+      double total = creado.total().doubleValue();
       double distinto = total + 1;
       if (distinto >= 100) {
         distinto = Math.max(total - 1, 0.01);
@@ -359,15 +357,13 @@ class PagosTest extends GatewayTest {
           .contentType(containsString("json"))
           .body("status", equalTo(409))
           .body("error", equalTo("Conflict"))
-          .body("message", equalTo("El monto no coincide con el total del pedido"));
+          .body("message", anyOf(
+              containsString("El monto no coincide con el total del pedido"),
+              containsString("no está en estado CREADO")));
 
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .when()
-          .get("/api/v1/pedido/" + pedidoId)
+      esperarPago(sesion, pedidoId, "PROCESADO")
           .then()
-          .statusCode(200)
-          .body("estado", equalTo("CREADO"));
+          .body("monto", equalTo((float) total));
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
@@ -376,14 +372,15 @@ class PagosTest extends GatewayTest {
   @Test
   @Story("Un monto menor al del pedido recibe 409")
   @DisplayName("Un monto menor al del pedido recibe 409")
-  @Description("POST /api/v1/pago con un monto menor al total del pedido, mayor a 0, responde 409 y el pedido sigue CREADO.")
-  void unMontoMenorAlDelPedidoRecibe409() {
+  @Description("POST /api/v1/pago con un monto menor al total responde 409 y el pago del sistema queda PROCESADO por el total correcto.")
+  void unMontoMenorAlDelPedidoRecibe409() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
-      double total = totalDelPedido(sesion, pedidoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
+      double total = creado.total().doubleValue();
       double menor = total - 1;
       if (menor <= 0) {
         menor = 0.01;
@@ -403,15 +400,13 @@ class PagosTest extends GatewayTest {
           .contentType(containsString("json"))
           .body("status", equalTo(409))
           .body("error", equalTo("Conflict"))
-          .body("message", equalTo("El monto no coincide con el total del pedido"));
+          .body("message", anyOf(
+              containsString("El monto no coincide con el total del pedido"),
+              containsString("no está en estado CREADO")));
 
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .when()
-          .get("/api/v1/pedido/" + pedidoId)
+      esperarPago(sesion, pedidoId, "PROCESADO")
           .then()
-          .statusCode(200)
-          .body("estado", equalTo("CREADO"));
+          .body("monto", equalTo((float) total));
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
@@ -420,14 +415,15 @@ class PagosTest extends GatewayTest {
   @Test
   @Story("Tras un monto distinto el total exacto queda procesado")
   @DisplayName("Tras un monto distinto el total exacto queda procesado")
-  @Description("Tras un 409 por monto distinto, POST /api/v1/pago con el total del pedido responde 201 PROCESADO y el pedido sigue pagable.")
-  void trasUnMontoDistintoElTotalExactoQuedaProcesado() {
+  @Description("Tras un 409 por monto distinto, el pago del pedido queda PROCESADO por el total exacto, lo cree el POST o el sistema.")
+  void trasUnMontoDistintoElTotalExactoQuedaProcesado() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
-      double total = totalDelPedido(sesion, pedidoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
+      double total = creado.total().doubleValue();
       double distinto = total + 1;
       if (distinto >= 100) {
         distinto = Math.max(total - 1, 0.01);
@@ -444,20 +440,15 @@ class PagosTest extends GatewayTest {
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
-          .when()
-          .get("/api/v1/pedido/" + pedidoId)
-          .then()
-          .statusCode(200)
-          .body("estado", equalTo("CREADO"));
-
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
           .body(Map.of("pedidoId", pedidoId, "monto", total))
           .when()
           .post("/api/v1/pago")
           .then()
-          .statusCode(201)
+          .statusCode(anyOf(equalTo(201), equalTo(409)));
+
+      esperarPago(sesion, pedidoId, "PROCESADO")
+          .then()
           .contentType(containsString("json"))
           .body("pedidoId", equalTo(pedidoId))
           .body("usuarioId", equalTo(sesion.id()))
@@ -472,11 +463,22 @@ class PagosTest extends GatewayTest {
   @Story("Pagar un pedido cancelado recibe 409")
   @DisplayName("Pagar un pedido cancelado recibe 409")
   @Description("POST /api/v1/pago de un pedido CANCELADO por el usuario, con el total del pedido, responde 409 y el pedido sigue CANCELADO.")
-  void pagarUnPedidoCanceladoRecibe409() {
+  void pagarUnPedidoCanceladoRecibe409() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
-    Number pedidoId = crearPedido(sesion, productoId);
-    double total = totalDelPedido(sesion, pedidoId);
+    PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
+    Number pedidoId = pedido.pedidoId();
+    Number total = pedido.total();
+    esperarPedidoCanceladoPorPago(sesion, pedidoId);
+    esperarStock(pedido.productoId(), pedido.stockAntes());
+
+    // reactivar no publica OrderCreatedEvent: el pedido queda CREADO sin pago automático
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/reactivar")
+        .then()
+        .statusCode(200)
+        .body("estado", equalTo("CREADO"));
 
     given()
         .header("Authorization", "Bearer " + sesion.token())
@@ -514,21 +516,14 @@ class PagosTest extends GatewayTest {
   @Story("Pagar de nuevo un pedido pagado recibe 409")
   @DisplayName("Pagar de nuevo un pedido pagado recibe 409")
   @Description("POST /api/v1/pago de un pedido ya pagado responde 409 con el mensaje El pedido ya está pagado.")
-  void pagarDeNuevoUnPedidoPagadoRecibe409() {
+  void pagarDeNuevoUnPedidoPagadoRecibe409() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201);
+      esperarEstado(sesion, pedidoId, "PAGADO", null);
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
@@ -541,7 +536,15 @@ class PagosTest extends GatewayTest {
           .contentType(containsString("json"))
           .body("status", equalTo(409))
           .body("error", equalTo("Conflict"))
-          .body("message", equalTo("El pedido con id " + pedidoId + " ya está pagado"));
+          .body("message", containsString("estado actual: PAGADO"));
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .body("estado", equalTo("PAGADO"));
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
@@ -550,19 +553,13 @@ class PagosTest extends GatewayTest {
   @Test
   @Story("Un monto por encima del máximo queda rechazado")
   @DisplayName("Un monto por encima del máximo queda rechazado")
-  @Description("POST /api/v1/pago con el total del pedido por encima del máximo responde 201 con estado RECHAZADO y el motivo del tope.")
-  void montoPorEncimaDelMaximoQuedaRechazado() {
+  @Description("El pago automático de un pedido por encima del máximo queda RECHAZADO con el motivo del tope.")
+  void montoPorEncimaDelMaximoQuedaRechazado() throws InterruptedException {
     Sesion sesion = sesionNueva();
     PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
     try {
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedido.pedidoId(), "monto", pedido.total()))
-          .when()
-          .post("/api/v1/pago")
+      esperarPago(sesion, pedido.pedidoId(), "RECHAZADO")
           .then()
-          .statusCode(201)
           .contentType(containsString("json"))
           .body("pedidoId", equalTo(pedido.pedidoId()))
           .body("estado", equalTo("RECHAZADO"))
@@ -583,16 +580,6 @@ class PagosTest extends GatewayTest {
     Number pedidoId = pedido.pedidoId();
     Number total = pedido.total();
     try {
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", total))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201)
-          .body("estado", equalTo("RECHAZADO"));
-
       esperarPedidoCanceladoPorPago(sesion, pedidoId);
 
       given()
@@ -626,23 +613,14 @@ class PagosTest extends GatewayTest {
   @Story("El pago procesado aparece en los míos")
   @DisplayName("El pago procesado aparece en los míos")
   @Description("GET /api/v1/pago/mios incluye el pago PROCESADO del propio pedido.")
-  void pagoProcesadoApareceEnLosMios() {
+  void pagoProcesadoApareceEnLosMios() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      Number pagoId = given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201)
-          .extract()
-          .path("id");
+      Number pagoId = esperarPago(sesion, pedidoId, "PROCESADO").path("id");
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
@@ -661,23 +639,14 @@ class PagosTest extends GatewayTest {
   @Story("Un usuario ve su pago por id")
   @DisplayName("Un usuario ve su pago por id")
   @Description("GET /api/v1/pago/{id} del propio pago PROCESADO responde 200 con ese id, el pedido y el estado.")
-  void usuarioVeSuPagoPorId() {
+  void usuarioVeSuPagoPorId() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      Number pagoId = given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201)
-          .extract()
-          .path("id");
+      Number pagoId = esperarPago(sesion, pedidoId, "PROCESADO").path("id");
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
@@ -698,23 +667,14 @@ class PagosTest extends GatewayTest {
   @Story("Un usuario ve el pago de su pedido")
   @DisplayName("Un usuario ve el pago de su pedido")
   @Description("GET /api/v1/pago/pedido/{id} del propio pedido pagado responde 200 con ese pago y estado PROCESADO.")
-  void usuarioVeElPagoDeSuPedido() {
+  void usuarioVeElPagoDeSuPedido() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      Number pagoId = given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201)
-          .extract()
-          .path("id");
+      Number pagoId = esperarPago(sesion, pedidoId, "PROCESADO").path("id");
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
@@ -729,24 +689,6 @@ class PagosTest extends GatewayTest {
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
-  }
-
-  private static Number productoConStock() {
-    List<Map<String, Object>> productos = given()
-        .when()
-        .get("/api/v1/producto")
-        .then()
-        .statusCode(200)
-        .extract()
-        .jsonPath()
-        .getList("");
-    for (Map<String, Object> producto : productos) {
-      int stock = ((Number) producto.get("stock")).intValue();
-      if (stock >= 1 && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
-        return (Number) producto.get("id");
-      }
-    }
-    throw new IllegalStateException("No hay un producto con stock");
   }
 
   private static void esperarPedidoCanceladoPorPago(Sesion sesion, Number pedidoId)
@@ -771,19 +713,6 @@ class PagosTest extends GatewayTest {
         .statusCode(200)
         .body("estado", equalTo("CANCELADO"))
         .body("motivoCancelacion", equalTo("PAGO_RECHAZADO"));
-  }
-
-  private static Number crearPedido(Sesion sesion, Number productoId) {
-    return given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .contentType("application/json")
-        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
-        .when()
-        .post("/api/v1/pedido")
-        .then()
-        .statusCode(201)
-        .extract()
-        .path("id");
   }
 
   private static void devolverPedido(Sesion sesion, Number pedidoId, Number productoId) {

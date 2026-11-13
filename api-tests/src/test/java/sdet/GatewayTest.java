@@ -16,12 +16,15 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.nullValue;
 
 abstract class GatewayTest {
   static final String REGISTRO = "/api/v1/auth/register";
   static final String LOGIN = "/api/v1/auth/login";
   static final String CONTRASENA = "Passw0rd!123";
   static final String AJENO = "9000000000000";
+  static final double TOPE_PAGO = 100.0;
 
   private static boolean listo;
 
@@ -126,6 +129,27 @@ abstract class GatewayTest {
     throw new IllegalStateException("No hay un producto cuyo total pueda superar el tope de 100");
   }
 
+  @Step("Elegir un producto con stock y precio bajo el tope de pago")
+  static Number productoPagable() {
+    List<Map<String, Object>> productos = RestAssured.given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      double precio = ((Number) producto.get("precio")).doubleValue();
+      if (stock >= 1 && precio <= TOPE_PAGO
+          && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        return (Number) producto.get("id");
+      }
+    }
+    throw new IllegalStateException("No hay un producto con stock bajo el tope de pago");
+  }
+
   @Step("Crear un pedido y guardar su total")
   static PedidoCreado crearPedidoPagable(Sesion sesion, Number productoId) {
     Response respuesta = RestAssured.given()
@@ -208,6 +232,76 @@ abstract class GatewayTest {
         .body("status", equalTo(404))
         .body("error", equalTo("Not Found"))
         .body("message", equalTo(mensaje));
+  }
+
+  @Step("Esperar el estado de un pedido")
+  static void esperarEstado(Sesion sesion, Number pedidoId, String estado, String motivo)
+      throws InterruptedException {
+    for (int intento = 0; intento < 20; intento++) {
+      Response respuesta = RestAssured.given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId);
+      if (respuesta.statusCode() == 200
+          && estado.equals(respuesta.path("estado"))
+          && (motivo == null || motivo.equals(respuesta.path("motivoCancelacion")))) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+    RestAssured.given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/pedido/" + pedidoId)
+        .then()
+        .statusCode(200)
+        .contentType(containsString("json"))
+        .body("estado", equalTo(estado))
+        .body("motivoCancelacion", motivo == null ? nullValue() : equalTo(motivo));
+  }
+
+  @Step("Esperar el stock de un producto")
+  static void esperarStock(Number productoId, int esperado) throws InterruptedException {
+    for (int intento = 0; intento < 20 && stockDe(productoId) < esperado; intento++) {
+      Thread.sleep(1000);
+    }
+    RestAssured.given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .body("stock", greaterThanOrEqualTo(esperado));
+  }
+
+  static int stockDe(Number productoId) {
+    return RestAssured.given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("stock");
+  }
+
+  @Step("Esperar el pago que crea el sistema")
+  static Response esperarPago(Sesion sesion, Number pedidoId, String estado)
+      throws InterruptedException {
+    Response respuesta = null;
+    for (int intento = 0; intento < 20; intento++) {
+      respuesta = RestAssured.given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pago/pedido/" + pedidoId);
+      if (respuesta.statusCode() == 200 && estado.equals(respuesta.path("estado"))) {
+        return respuesta;
+      }
+      Thread.sleep(1000);
+    }
+    return respuesta.then()
+        .statusCode(200)
+        .body("estado", equalTo(estado))
+        .extract()
+        .response();
   }
 
   record Sesion(Number id, String email, String token) {}

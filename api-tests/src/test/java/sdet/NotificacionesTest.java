@@ -507,19 +507,11 @@ class NotificacionesTest extends GatewayTest {
   @Description("GET /api/v1/notificacion/mias incluye un aviso PAGO_PROCESADO con estado PROCESADO.")
   void pagoProcesadoAvisaAlUsuario() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
+    Number productoId = productoPagable();
     Number pedidoId = null;
     try {
       PedidoCreado creado = crearPedidoPagable(sesion, productoId);
       pedidoId = creado.id();
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201);
       esperarAviso(sesion, "PAGO_PROCESADO", "del pedido #" + pedidoId + " quedó en estado PROCESADO");
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
@@ -536,14 +528,6 @@ class NotificacionesTest extends GatewayTest {
     Number productoId = pedido.productoId();
     Number pedidoId = pedido.pedidoId();
     try {
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", pedido.total()))
-          .when()
-          .post("/api/v1/pago")
-          .then()
-          .statusCode(201);
       esperarAviso(
           sesion,
           "PAGO_PROCESADO",

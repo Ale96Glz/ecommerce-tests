@@ -155,17 +155,19 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Pagar un pedido inexistente recibe 404 | `No se encontró el pedido con id` |
 | Un pago por id con token inválido recibe 401 | `Token inválido o expirado` |
 | Pagar el pedido de otro usuario recibe 403 | `El pedido con id` no pertenece al usuario autenticado |
-| Un usuario paga su pedido | 201, estado `PROCESADO` |
-| Un monto distinto al del pedido recibe 409 | `El monto no coincide con el total del pedido`; el pedido sigue `CREADO` |
-| Un monto menor al del pedido recibe 409 | `El monto no coincide con el total del pedido`; el pedido sigue `CREADO` |
-| Tras un monto distinto el total exacto queda procesado | 409 y el pedido sigue `CREADO`; luego 201 `PROCESADO` con el total |
+| El sistema paga el pedido automáticamente | al crear el pedido, su pago queda `PROCESADO` por el total y el pedido pasa a `PAGADO` |
+| Un monto distinto al del pedido recibe 409 | 409 (monto distinto o pedido ya no `CREADO`); el pago del sistema queda `PROCESADO` por el total |
+| Un monto menor al del pedido recibe 409 | 409 (monto distinto o pedido ya no `CREADO`); el pago del sistema queda `PROCESADO` por el total |
+| Tras un monto distinto el total exacto queda procesado | 409 al monto distinto; el pago queda `PROCESADO` por el total, lo cree el POST o el sistema |
 | Pagar un pedido cancelado recibe 409 | `El pedido con id` no está en estado `CREADO` (estado actual: `CANCELADO`); el pedido sigue `CANCELADO` |
 | El pago procesado aparece en los míos | 200, el id está en el arreglo |
 | Un usuario ve su pago por id | 200, ese pago en estado `PROCESADO` |
 | Un usuario ve el pago de su pedido | 200, el pago de ese pedido en estado `PROCESADO` |
-| Pagar de nuevo un pedido pagado recibe 409 | `El pedido con id` ya está pagado |
-| Un monto por encima del máximo queda rechazado | 201, estado `RECHAZADO` y el tope aprobado; el `monto` es el total del pedido (mayor a 100) |
+| Pagar de nuevo un pedido pagado recibe 409 | 409, `El pedido con id` no está en estado `CREADO` (estado actual: `PAGADO`) |
+| Un monto por encima del máximo queda rechazado | el pago automático queda `RECHAZADO` con el motivo del tope; el `monto` es el total del pedido (mayor a 100) |
 | Pagar de nuevo un pedido con pago rechazado recibe 409 | `El pedido con id` no está en estado `CREADO` (estado actual: `CANCELADO`); motivo `PAGO_RECHAZADO` |
+
+El pago del pedido lo crea el sistema al recibir `OrderCreatedEvent`; el `POST /api/v1/pago` solo puede cobrar mientras el pedido siga `CREADO` y, si el pago automático ya lo pasó a `PAGADO`, responde 409.
 
 ## Notificaciones
 
