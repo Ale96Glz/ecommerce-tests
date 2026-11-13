@@ -10,6 +10,7 @@ import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -436,6 +437,51 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("El total del pedido es la suma de las líneas")
+  @DisplayName("El total del pedido es la suma de las líneas")
+  @Description("POST /api/v1/pedido con dos productos distintos responde 201 con total igual a la suma de sus precios, y GET lo confirma.")
+  void elTotalDelPedidoEsLaSumaDeLasLineas() {
+    Sesion sesion = sesionNueva();
+    List<Map<String, Object>> lineas = dosProductosConStock();
+    Number uno = (Number) lineas.get(0).get("id");
+    Number dos = (Number) lineas.get(1).get("id");
+    float esperado = (float) (((Number) lineas.get(0).get("precio")).doubleValue()
+        + ((Number) lineas.get(1).get("precio")).doubleValue());
+    Number pedidoId = null;
+    try {
+      pedidoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("items", List.of(
+              Map.of("productoId", uno, "cantidad", 1),
+              Map.of("productoId", dos, "cantidad", 1))))
+          .when()
+          .post("/api/v1/pedido")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("estado", equalTo("CREADO"))
+          .body("items.size()", equalTo(2))
+          .body("total", equalTo(esperado))
+          .extract()
+          .path("id");
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", equalTo(pedidoId))
+          .body("items.size()", equalTo(2))
+          .body("total", equalTo(esperado));
+    } finally {
+      devolverPedido(sesion, pedidoId, uno);
+    }
+  }
+
+  @Test
   @Story("Pedir más unidades que el stock recibe 409")
   @DisplayName("Pedir más unidades que el stock recibe 409")
   @Description("POST /api/v1/pedido con cantidad mayor al stock responde 409 con Stock insuficiente y el stock no cambia.")
@@ -824,6 +870,28 @@ class PedidosTest extends GatewayTest {
 
   private static Number productoConStock() {
     return productoConStock(1);
+  }
+
+  private static List<Map<String, Object>> dosProductosConStock() {
+    List<Map<String, Object>> productos = given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    List<Map<String, Object>> elegidos = new ArrayList<>();
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      if (stock >= 1 && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        elegidos.add(producto);
+        if (elegidos.size() == 2) {
+          return elegidos;
+        }
+      }
+    }
+    throw new IllegalStateException("Hacen falta dos productos con stock");
   }
 
   private static Number productoConStock(int minimo) {
