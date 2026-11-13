@@ -5,6 +5,7 @@ import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
 import static io.gatling.javaapi.core.CoreDsl.pace;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
@@ -46,7 +47,7 @@ public class StockClientesSimulation extends Simulation {
                 .get("/api/v1/producto")
                 .requestTimeout(Duration.ofSeconds(3))
                 .check(status().is(200))
-                .check(jsonPath("$[0].id").ofLong().saveAs("productoId")))
+                .check(Productos.conStock()))
         .exec(session -> {
           productoId.set(session.getLong("productoId"));
           return session;
@@ -95,6 +96,9 @@ public class StockClientesSimulation extends Simulation {
             preparacion.injectOpen(atOnceUsers(1))
                 .andThen(compra.injectOpen(atOnceUsers(usuarios))))
         .protocols(protocolo)
+        .assertions(
+            global().responseTime().max().lt(3000),
+            global().failedRequests().percent().lt(5.0))
         .maxDuration(Duration.ofSeconds((long) usuarios * ritmoRegistro + 20));
   }
 

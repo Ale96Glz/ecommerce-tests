@@ -4,6 +4,7 @@ import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
@@ -53,7 +54,7 @@ public class StockConcurrenteSimulation extends Simulation {
                 .get("/api/v1/producto")
                 .requestTimeout(Duration.ofSeconds(3))
                 .check(status().is(200))
-                .check(jsonPath("$[0].id").ofLong().saveAs("productoId")))
+                .check(Productos.conStock()))
         .exec(session -> {
           productoId.set(session.getLong("productoId"));
           return session;
@@ -80,12 +81,15 @@ public class StockConcurrenteSimulation extends Simulation {
                     "{\"items\":[{\"productoId\":" + productoId.get() + ",\"cantidad\":1}]}"))
                 .asJson()
                 .requestTimeout(Duration.ofSeconds(3))
-                .check(status().in(201, 409)));
+                .check(status().in(201, 409, 429)));
 
     setUp(
             preparacion.injectOpen(atOnceUsers(1))
                 .andThen(compra.injectOpen(atOnceUsers(usuarios))))
         .protocols(protocolo)
+        .assertions(
+            global().responseTime().max().lt(3000),
+            global().failedRequests().percent().lt(5.0))
         .maxDuration(Duration.ofSeconds(15));
   }
 

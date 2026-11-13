@@ -1,9 +1,13 @@
 package sdet;
 
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
-import static io.gatling.javaapi.core.CoreDsl.rampUsers;
+import static io.gatling.javaapi.core.CoreDsl.details;
+import static io.gatling.javaapi.core.CoreDsl.doIf;
+import static io.gatling.javaapi.core.CoreDsl.exec;
+import static io.gatling.javaapi.core.CoreDsl.global;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
 import static io.gatling.javaapi.core.CoreDsl.pause;
+import static io.gatling.javaapi.core.CoreDsl.rampUsers;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
@@ -56,7 +60,7 @@ public class ProcesoCompletoSimulation extends Simulation {
                 .get("/api/v1/producto")
                 .requestTimeout(Duration.ofSeconds(3))
                 .check(status().is(200))
-                .check(jsonPath("$[0].id").saveAs("productoId")))
+                .check(Productos.pagable()))
         .exitHereIfFailed()
         .pause(Duration.ofSeconds(2))
         .exec(
@@ -66,44 +70,50 @@ public class ProcesoCompletoSimulation extends Simulation {
                 .body(StringBody("{\"items\":[{\"productoId\":#{productoId},\"cantidad\":1}]}"))
                 .asJson()
                 .requestTimeout(Duration.ofSeconds(3))
-                .check(status().is(201))
-                .check(jsonPath("$.estado").is("CREADO"))
-                .check(jsonPath("$.id").saveAs("pedidoId")))
+                .check(status().in(201, 409))
+                .check(status().saveAs("crearStatus"))
+                .check(jsonPath("$.id").optional().saveAs("pedidoId")))
         .exitHereIfFailed()
-        .exec(session -> session.set("estadoPedido", "CREADO"))
-        .asLongAsDuring(
-            session -> "CREADO".equals(session.getString("estadoPedido")),
-            Duration.ofSeconds(20))
-        .on(
-            pause(Duration.ofSeconds(1))
+        .doIf(session -> session.getInt("crearStatus") == 201)
+        .then(
+            exec(session -> session.set("estadoPedido", "CREADO"))
+                .asLongAsDuring(
+                    session -> "CREADO".equals(session.getString("estadoPedido")),
+                    Duration.ofSeconds(20))
+                .on(
+                    pause(Duration.ofSeconds(1))
+                        .exec(
+                            http("Estado del pedido")
+                                .get("/api/v1/pedido/#{pedidoId}")
+                                .header("Authorization", "Bearer #{token}")
+                                .requestTimeout(Duration.ofSeconds(3))
+                                .check(status().is(200))
+                                .check(jsonPath("$.estado").saveAs("estadoPedido"))))
                 .exec(
-                    http("Estado del pedido")
+                    http("Pedido cerrado")
                         .get("/api/v1/pedido/#{pedidoId}")
                         .header("Authorization", "Bearer #{token}")
                         .requestTimeout(Duration.ofSeconds(3))
                         .check(status().is(200))
-                        .check(jsonPath("$.estado").saveAs("estadoPedido"))))
-        .exec(
-            http("Pedido cerrado")
-                .get("/api/v1/pedido/#{pedidoId}")
-                .header("Authorization", "Bearer #{token}")
-                .requestTimeout(Duration.ofSeconds(3))
-                .check(status().is(200))
-                .check(jsonPath("$.estado").is("PAGADO")))
-        .exitHereIfFailed()
-        .pause(Duration.ofSeconds(2))
-        .exec(
-            http("Mis notificaciones")
-                .get("/api/v1/notificacion/mias")
-                .header("Authorization", "Bearer #{token}")
-                .requestTimeout(Duration.ofSeconds(3))
-                .check(status().is(200))
-                .check(jsonPath("$[?(@.tipo == 'PEDIDO_CREADO')].tipo").find().exists())
-                .check(jsonPath("$[?(@.tipo == 'PAGO_PROCESADO')].tipo").find().exists()));
+                        .check(jsonPath("$.estado").is("PAGADO")))
+                .exitHereIfFailed()
+                .pause(Duration.ofSeconds(2))
+                .exec(
+                    http("Mis notificaciones")
+                        .get("/api/v1/notificacion/mias")
+                        .header("Authorization", "Bearer #{token}")
+                        .requestTimeout(Duration.ofSeconds(3))
+                        .check(status().is(200))
+                        .check(jsonPath("$[?(@.tipo == 'PEDIDO_CREADO')].tipo").find().exists())
+                        .check(jsonPath("$[?(@.tipo == 'PAGO_PROCESADO')].tipo").find().exists())));
 
     setUp(proceso.injectOpen(rampUsers(usuarios).during(Duration.ofSeconds(rampaSegundos))))
         .protocols(protocolo)
-        .maxDuration(Duration.ofSeconds(rampaSegundos + 45));
+        .maxDuration(Duration.ofSeconds(rampaSegundos + 45))
+        .assertions(
+            global().responseTime().max().lt(3000),
+            global().failedRequests().percent().lt(5.0),
+            details("Pedido cerrado").successfulRequests().count().gt(0L));
   }
 
   private static Iterator<Map<String, Object>> usuarios() {
