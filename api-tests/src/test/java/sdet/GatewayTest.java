@@ -11,6 +11,7 @@ import io.restassured.specification.FilterableRequestSpecification;
 import io.restassured.specification.FilterableResponseSpecification;
 import org.junit.jupiter.api.BeforeAll;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
@@ -79,6 +80,52 @@ abstract class GatewayTest {
     return new Sesion(id, email, token);
   }
 
+  @Step("Crear un pedido cuyo total supera el tope de pago")
+  static PedidoSobreTope crearPedidoSobreTope(Sesion sesion) {
+    Map<String, Object> producto = productoParaSuperarTope();
+    Number productoId = (Number) producto.get("id");
+    int cantidad = ((Number) producto.get("cantidad")).intValue();
+    int stockAntes = ((Number) RestAssured.given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("stock")).intValue();
+    Response respuesta = RestAssured.given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", cantidad))))
+        .when()
+        .post("/api/v1/pedido");
+    respuesta.then().statusCode(201);
+    return new PedidoSobreTope(productoId, respuesta.path("id"), respuesta.path("total"), stockAntes);
+  }
+
+  @Step("Elegir un producto cuyo total pueda superar el tope de pago")
+  static Map<String, Object> productoParaSuperarTope() {
+    List<Map<String, Object>> productos = RestAssured.given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      double precio = ((Number) producto.get("precio")).doubleValue();
+      if (stock < 1 || precio <= 0 || "AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        continue;
+      }
+      int cantidad = precio > 100 ? 1 : (int) Math.floor(100.0 / precio) + 1;
+      if (stock >= cantidad) {
+        return Map.of("id", producto.get("id"), "cantidad", cantidad);
+      }
+    }
+    throw new IllegalStateException("No hay un producto cuyo total pueda superar el tope de 100");
+  }
+
   @Step("Comprobar el 401 por falta de Bearer")
   static void sinBearer(Response respuesta) {
     respuesta.then()
@@ -130,6 +177,8 @@ abstract class GatewayTest {
   }
 
   record Sesion(Number id, String email, String token) {}
+
+  record PedidoSobreTope(Number productoId, Number pedidoId, Number total, int stockAntes) {}
 
   private static final class ReintentoLimite implements Filter {
     private static final ThreadLocal<Boolean> activo = ThreadLocal.withInitial(() -> false);

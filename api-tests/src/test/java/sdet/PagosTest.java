@@ -547,27 +547,25 @@ class PagosTest extends GatewayTest {
   @Test
   @Story("Un monto por encima del máximo queda rechazado")
   @DisplayName("Un monto por encima del máximo queda rechazado")
-  @Description("POST /api/v1/pago con un monto mayor al máximo responde 201 con estado RECHAZADO y el motivo del tope.")
+  @Description("POST /api/v1/pago con el total del pedido por encima del máximo responde 201 con estado RECHAZADO y el motivo del tope.")
   void montoPorEncimaDelMaximoQuedaRechazado() {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
-    Number pedidoId = null;
+    PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
     try {
-      pedidoId = crearPedido(sesion, productoId);
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+          .body(Map.of("pedidoId", pedido.pedidoId(), "monto", pedido.total()))
           .when()
           .post("/api/v1/pago")
           .then()
           .statusCode(201)
           .contentType(containsString("json"))
-          .body("pedidoId", equalTo(pedidoId))
+          .body("pedidoId", equalTo(pedido.pedidoId()))
           .body("estado", equalTo("RECHAZADO"))
           .body("motivoRechazo", equalTo("Monto excede el máximo aprobado (100.00)"));
     } finally {
-      devolverPedido(sesion, pedidoId, productoId);
+      devolverPedido(sesion, pedido.pedidoId(), pedido.productoId());
     }
   }
 
@@ -577,23 +575,11 @@ class PagosTest extends GatewayTest {
   @Description("Tras un pago RECHAZADO, cuando el pedido queda CANCELADO, POST /api/v1/pago con el total responde 409 y el pedido sigue CANCELADO.")
   void pagarDeNuevoUnPedidoConPagoRechazadoRecibe409() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Map<String, Object> sobreElTope = productoParaSuperarTope();
-    Number productoId = (Number) sobreElTope.get("id");
-    int cantidad = ((Number) sobreElTope.get("cantidad")).intValue();
-    Number pedidoId = null;
+    PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
+    Number productoId = pedido.productoId();
+    Number pedidoId = pedido.pedidoId();
+    Number total = pedido.total();
     try {
-      pedidoId = given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .contentType("application/json")
-          .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", cantidad))))
-          .when()
-          .post("/api/v1/pedido")
-          .then()
-          .statusCode(201)
-          .extract()
-          .path("id");
-      double total = totalDelPedido(sesion, pedidoId);
-
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
@@ -737,29 +723,6 @@ class PagosTest extends GatewayTest {
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
     }
-  }
-
-  private static Map<String, Object> productoParaSuperarTope() {
-    List<Map<String, Object>> productos = given()
-        .when()
-        .get("/api/v1/producto")
-        .then()
-        .statusCode(200)
-        .extract()
-        .jsonPath()
-        .getList("");
-    for (Map<String, Object> producto : productos) {
-      int stock = ((Number) producto.get("stock")).intValue();
-      double precio = ((Number) producto.get("precio")).doubleValue();
-      if (stock < 1 || precio <= 0 || "AGOTADO".equals(String.valueOf(producto.get("estado")))) {
-        continue;
-      }
-      int cantidad = precio > 100 ? 1 : (int) Math.floor(100.0 / precio) + 1;
-      if (stock >= cantidad) {
-        return Map.of("id", producto.get("id"), "cantidad", cantidad);
-      }
-    }
-    throw new IllegalStateException("No hay un producto cuyo total pueda superar el tope de 100");
   }
 
   private static Number productoConStock() {

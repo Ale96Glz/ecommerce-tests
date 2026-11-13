@@ -531,14 +531,14 @@ class NotificacionesTest extends GatewayTest {
   @Description("GET /api/v1/notificacion/mias incluye un aviso PAGO_PROCESADO con estado RECHAZADO y el motivo del tope.")
   void pagoRechazadoAvisaAlUsuario() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
-    Number pedidoId = null;
+    PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
+    Number productoId = pedido.productoId();
+    Number pedidoId = pedido.pedidoId();
     try {
-      pedidoId = crearPedido(sesion, productoId);
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", pedido.total()))
           .when()
           .post("/api/v1/pago")
           .then()

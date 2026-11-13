@@ -836,20 +836,18 @@ class PedidosTest extends GatewayTest {
   @Description("Tras un pago RECHAZADO, GET /api/v1/pedido/{id} responde 200 con estado CANCELADO, motivo PAGO_RECHAZADO y el stock vuelve.")
   void pedidoConPagoRechazadoQuedaCancelado() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
-    int antes = stockDe(productoId);
-    Number pedidoId = crearPedido(sesion, productoId);
+    PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
     given()
         .header("Authorization", "Bearer " + sesion.token())
         .contentType("application/json")
-        .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+        .body(Map.of("pedidoId", pedido.pedidoId(), "monto", pedido.total()))
         .when()
         .post("/api/v1/pago")
         .then()
         .statusCode(201);
 
-    esperarEstado(sesion, pedidoId, "CANCELADO", "PAGO_RECHAZADO");
-    esperarStock(productoId, antes);
+    esperarEstado(sesion, pedido.pedidoId(), "CANCELADO", "PAGO_RECHAZADO");
+    esperarStock(pedido.productoId(), pedido.stockAntes());
   }
 
   @Test
@@ -858,14 +856,14 @@ class PedidosTest extends GatewayTest {
   @Description("PUT /api/v1/pedido/{id}/reactivar de un pedido cancelado por pago rechazado responde 200 con estado CREADO.")
   void reactivarPedidoConPagoRechazadoLoDejaCreado() throws InterruptedException {
     Sesion sesion = sesionNueva();
-    Number productoId = productoConStock();
-    Number pedidoId = null;
+    PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
+    Number productoId = pedido.productoId();
+    Number pedidoId = pedido.pedidoId();
     try {
-      pedidoId = crearPedido(sesion, productoId);
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 1000.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", pedido.total()))
           .when()
           .post("/api/v1/pago")
           .then()
