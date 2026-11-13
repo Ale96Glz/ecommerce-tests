@@ -390,6 +390,52 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("El total del pedido es precio por cantidad")
+  @DisplayName("El total del pedido es precio por cantidad")
+  @Description("POST /api/v1/pedido con cantidad 2 responde 201 con total igual al precio del producto por dos, y GET lo confirma.")
+  void elTotalDelPedidoEsPrecioPorCantidad() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConStock(2);
+    Number precio = given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("precio");
+    float esperado = (float) (precio.doubleValue() * 2);
+    Number pedidoId = null;
+    try {
+      pedidoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 2))))
+          .when()
+          .post("/api/v1/pedido")
+          .then()
+          .statusCode(201)
+          .contentType(containsString("json"))
+          .body("estado", equalTo("CREADO"))
+          .body("items[0].cantidad", equalTo(2))
+          .body("total", equalTo(esperado))
+          .extract()
+          .path("id");
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .contentType(containsString("json"))
+          .body("id", equalTo(pedidoId))
+          .body("total", equalTo(esperado));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("Pedir más unidades que el stock recibe 409")
   @DisplayName("Pedir más unidades que el stock recibe 409")
   @Description("POST /api/v1/pedido con cantidad mayor al stock responde 409 con Stock insuficiente y el stock no cambia.")
