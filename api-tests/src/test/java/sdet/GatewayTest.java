@@ -126,6 +126,40 @@ abstract class GatewayTest {
     throw new IllegalStateException("No hay un producto cuyo total pueda superar el tope de 100");
   }
 
+  @Step("Crear un pedido y guardar su total")
+  static PedidoCreado crearPedidoPagable(Sesion sesion, Number productoId) {
+    Response respuesta = RestAssured.given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
+        .when()
+        .post("/api/v1/pedido");
+    respuesta.then().statusCode(201);
+    return new PedidoCreado(respuesta.path("id"), respuesta.path("total"));
+  }
+
+  @Step("Leer el total del pedido")
+  static double totalDelPedido(Sesion sesion, Number pedidoId) {
+    Response pedido = RestAssured.given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/pedido/" + pedidoId);
+    pedido.then().statusCode(200);
+    Number total = pedido.path("total");
+    if (total != null) {
+      return total.doubleValue();
+    }
+    Number productoId = pedido.path("items[0].productoId");
+    Number precio = RestAssured.given()
+        .when()
+        .get("/api/v1/producto/" + productoId)
+        .then()
+        .statusCode(200)
+        .extract()
+        .path("precio");
+    return precio.doubleValue();
+  }
+
   @Step("Comprobar el 401 por falta de Bearer")
   static void sinBearer(Response respuesta) {
     respuesta.then()
@@ -179,6 +213,8 @@ abstract class GatewayTest {
   record Sesion(Number id, String email, String token) {}
 
   record PedidoSobreTope(Number productoId, Number pedidoId, Number total, int stockAntes) {}
+
+  record PedidoCreado(Number id, Number total) {}
 
   private static final class ReintentoLimite implements Filter {
     private static final ThreadLocal<Boolean> activo = ThreadLocal.withInitial(() -> false);

@@ -510,11 +510,12 @@ class NotificacionesTest extends GatewayTest {
     Number productoId = productoConStock();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()

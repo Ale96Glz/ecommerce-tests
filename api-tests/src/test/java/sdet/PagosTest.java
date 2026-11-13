@@ -285,11 +285,12 @@ class PagosTest extends GatewayTest {
     Number productoId = productoConStock();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(dueno, productoId);
+      PedidoCreado creado = crearPedidoPagable(dueno, productoId);
+      pedidoId = creado.id();
       given()
           .header("Authorization", "Bearer " + ajeno.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()
@@ -312,11 +313,12 @@ class PagosTest extends GatewayTest {
     Number productoId = productoConStock();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()
@@ -517,11 +519,12 @@ class PagosTest extends GatewayTest {
     Number productoId = productoConStock();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()
@@ -530,7 +533,7 @@ class PagosTest extends GatewayTest {
       given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()
@@ -628,11 +631,12 @@ class PagosTest extends GatewayTest {
     Number productoId = productoConStock();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
       Number pagoId = given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()
@@ -662,11 +666,12 @@ class PagosTest extends GatewayTest {
     Number productoId = productoConStock();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
       Number pagoId = given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()
@@ -698,11 +703,12 @@ class PagosTest extends GatewayTest {
     Number productoId = productoConStock();
     Number pedidoId = null;
     try {
-      pedidoId = crearPedido(sesion, productoId);
+      PedidoCreado creado = crearPedidoPagable(sesion, productoId);
+      pedidoId = creado.id();
       Number pagoId = given()
           .header("Authorization", "Bearer " + sesion.token())
           .contentType("application/json")
-          .body(Map.of("pedidoId", pedidoId, "monto", 10.0))
+          .body(Map.of("pedidoId", pedidoId, "monto", creado.total()))
           .when()
           .post("/api/v1/pago")
           .then()
@@ -741,27 +747,6 @@ class PagosTest extends GatewayTest {
       }
     }
     throw new IllegalStateException("No hay un producto con stock");
-  }
-
-  private static double totalDelPedido(Sesion sesion, Number pedidoId) {
-    Response pedido = given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .when()
-        .get("/api/v1/pedido/" + pedidoId);
-    pedido.then().statusCode(200);
-    Number total = pedido.path("total");
-    if (total != null) {
-      return total.doubleValue();
-    }
-    Number productoId = pedido.path("items[0].productoId");
-    Number precio = given()
-        .when()
-        .get("/api/v1/producto/" + productoId)
-        .then()
-        .statusCode(200)
-        .extract()
-        .path("precio");
-    return precio.doubleValue();
   }
 
   private static void esperarPedidoCanceladoPorPago(Sesion sesion, Number pedidoId)
