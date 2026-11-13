@@ -1,0 +1,24 @@
+# Maven
+/target/
+**/target/
+
+# IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Logs & Reports
+*.log
+allure-results/
+allure-report/
+allure-history/
+gatling/
+**/allure-results/
+**/allure-report/
+**/allure-history/
+**/gatling/
+*.tmp
+api-tmp/
+load-tmp/
