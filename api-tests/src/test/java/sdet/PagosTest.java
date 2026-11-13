@@ -572,6 +572,68 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Pagar de nuevo un pedido con pago rechazado recibe 409")
+  @DisplayName("Pagar de nuevo un pedido con pago rechazado recibe 409")
+  @Description("Tras un pago RECHAZADO, cuando el pedido queda CANCELADO, POST /api/v1/pago con el total responde 409 y el pedido sigue CANCELADO.")
+  void pagarDeNuevoUnPedidoConPagoRechazadoRecibe409() throws InterruptedException {
+    Sesion sesion = sesionNueva();
+    Map<String, Object> sobreElTope = productoParaSuperarTope();
+    Number productoId = (Number) sobreElTope.get("id");
+    int cantidad = ((Number) sobreElTope.get("cantidad")).intValue();
+    Number pedidoId = null;
+    try {
+      pedidoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", cantidad))))
+          .when()
+          .post("/api/v1/pedido")
+          .then()
+          .statusCode(201)
+          .extract()
+          .path("id");
+      double total = totalDelPedido(sesion, pedidoId);
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", total))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(201)
+          .body("estado", equalTo("RECHAZADO"));
+
+      esperarPedidoCanceladoPorPago(sesion, pedidoId);
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("pedidoId", pedidoId, "monto", total))
+          .when()
+          .post("/api/v1/pago")
+          .then()
+          .statusCode(409)
+          .contentType(containsString("json"))
+          .body("status", equalTo(409))
+          .body("error", equalTo("Conflict"))
+          .body("message", equalTo(
+              "El pedido con id " + pedidoId + " no está en estado CREADO (estado actual: CANCELADO)"));
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId)
+          .then()
+          .statusCode(200)
+          .body("estado", equalTo("CANCELADO"))
+          .body("motivoCancelacion", equalTo("PAGO_RECHAZADO"));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("El pago procesado aparece en los míos")
   @DisplayName("El pago procesado aparece en los míos")
   @Description("GET /api/v1/pago/mios incluye el pago PROCESADO del propio pedido.")
@@ -677,6 +739,29 @@ class PagosTest extends GatewayTest {
     }
   }
 
+  private static Map<String, Object> productoParaSuperarTope() {
+    List<Map<String, Object>> productos = given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      double precio = ((Number) producto.get("precio")).doubleValue();
+      if (stock < 1 || precio <= 0 || "AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        continue;
+      }
+      int cantidad = precio > 100 ? 1 : (int) Math.floor(100.0 / precio) + 1;
+      if (stock >= cantidad) {
+        return Map.of("id", producto.get("id"), "cantidad", cantidad);
+      }
+    }
+    throw new IllegalStateException("No hay un producto cuyo total pueda superar el tope de 100");
+  }
+
   private static Number productoConStock() {
     List<Map<String, Object>> productos = given()
         .when()
@@ -714,6 +799,30 @@ class PagosTest extends GatewayTest {
         .extract()
         .path("precio");
     return precio.doubleValue();
+  }
+
+  private static void esperarPedidoCanceladoPorPago(Sesion sesion, Number pedidoId)
+      throws InterruptedException {
+    for (int intento = 0; intento < 20; intento++) {
+      Response respuesta = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .get("/api/v1/pedido/" + pedidoId);
+      if (respuesta.statusCode() == 200
+          && "CANCELADO".equals(respuesta.path("estado"))
+          && "PAGO_RECHAZADO".equals(respuesta.path("motivoCancelacion"))) {
+        return;
+      }
+      Thread.sleep(1000);
+    }
+    given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .get("/api/v1/pedido/" + pedidoId)
+        .then()
+        .statusCode(200)
+        .body("estado", equalTo("CANCELADO"))
+        .body("motivoCancelacion", equalTo("PAGO_RECHAZADO"));
   }
 
   private static Number crearPedido(Sesion sesion, Number productoId) {
