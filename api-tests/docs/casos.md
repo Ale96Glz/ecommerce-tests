@@ -113,7 +113,10 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un pedido por id con token inválido recibe 401 | `Token inválido o expirado` |
 | Crear un pedido descuenta el stock | 201, estado `CREADO` y el stock baja una unidad |
 | Un pedido de dos unidades descuenta el stock | 201, estado `CREADO` y el stock baja dos unidades |
+| El total del pedido es precio por cantidad | 201, `total` = precio × 2; GET confirma el mismo `total` |
+| El total del pedido es la suma de las líneas | 201, `total` = precio₁ + precio₂; GET confirma el mismo `total` |
 | Pedir más unidades que el stock recibe 409 | `Stock insuficiente para el producto` y el stock no cambia |
+| Pedir un producto agotado recibe 409 | stock 0 y `AGOTADO`; luego 409 `Stock insuficiente` y el stock sigue en 0 |
 | Pedir un producto inexistente recibe 404 | `No existe el producto con id` |
 | Un usuario ve su pedido por id | 200, estado `CREADO` |
 | Un usuario no puede ver un pedido ajeno | 403, `No puedes acceder a recursos de otro usuario` |
@@ -161,7 +164,8 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario ve su pago por id | 200, ese pago en estado `PROCESADO` |
 | Un usuario ve el pago de su pedido | 200, el pago de ese pedido en estado `PROCESADO` |
 | Pagar de nuevo un pedido pagado recibe 409 | `El pedido con id` ya está pagado |
-| Un monto por encima del máximo queda rechazado | 201, estado `RECHAZADO` y el tope aprobado |
+| Un monto por encima del máximo queda rechazado | 201, estado `RECHAZADO` y el tope aprobado; el `monto` es el total del pedido (mayor a 100) |
+| Pagar de nuevo un pedido con pago rechazado recibe 409 | `El pedido con id` no está en estado `CREADO` (estado actual: `CANCELADO`); motivo `PAGO_RECHAZADO` |
 
 ## Notificaciones
 
