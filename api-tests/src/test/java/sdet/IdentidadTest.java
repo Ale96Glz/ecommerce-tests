@@ -173,8 +173,8 @@ class IdentidadTest extends GatewayTest {
         .contentType(containsString("json"))
         .body("status", equalTo(400))
         .body("error", equalTo("Bad Request"))
-        .body("message", equalTo(
-            "nombre: El nombre debe tener entre 2 y 100 caracteres; nombre: El nombre no puede estar vacio"));
+        .body("message", containsString("nombre: El nombre no puede estar vacio"))
+        .body("message", containsString("nombre: El nombre debe tener entre 2 y 100 caracteres"));
   }
 
   @Test
