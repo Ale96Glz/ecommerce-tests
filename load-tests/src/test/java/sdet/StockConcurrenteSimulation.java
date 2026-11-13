@@ -26,7 +26,7 @@ public class StockConcurrenteSimulation extends Simulation {
       baseUrl = "https://ecommerce.local";
     }
 
-    int usuarios = Integer.getInteger("load.users", 50);
+    int usuarios = Integer.getInteger("load.users", 20);
 
     Faker faker = new Faker(Locale.forLanguageTag("es"));
     String nombre = faker.name().fullName();
@@ -81,7 +81,7 @@ public class StockConcurrenteSimulation extends Simulation {
                     "{\"items\":[{\"productoId\":" + productoId.get() + ",\"cantidad\":1}]}"))
                 .asJson()
                 .requestTimeout(Duration.ofSeconds(3))
-                .check(status().in(201, 409, 429)));
+                .check(status().in(201, 409)));
 
     setUp(
             preparacion.injectOpen(atOnceUsers(1))

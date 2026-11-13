@@ -133,7 +133,7 @@ Setup (fuera de la carga): `GET /api/v1/producto` y un registro. Se guarda `prod
 
 Carga: `load.users` peticiones `POST /api/v1/pedido` a la vez, **el mismo Bearer** y **el mismo producto**, cantidad 1. En Gatling son muchos usuarios virtuales; en el sistema es **un USER**. El stock se disputa igual: es del producto.
 
-Sin propiedades: 30 pedidos a la vez. La ráfaga autenticada es 20; el resto puede ser 429.
+Sin propiedades: 20 pedidos a la vez. Coincide con la ráfaga autenticada: todas las peticiones llegan al servicio de pedidos y un 429 sería una anomalía.
 
 | Código | Significado |
 |---|---|
@@ -184,5 +184,6 @@ Notas de esa corrida:
 
 - Solo la saga de checkout tiene aserciones. Las otras 14 terminan en `BUILD SUCCESS` aunque tengan KO: ese es el hueco que cierra el paso de aserciones.
 - Los 3 KO del recorrido completo son 429 en el listado, residuo del límite de la corrida anterior; 7 de 10 usuarios llegaron al pedido. No es falta de capacidad.
-- Los 10 KO de stock concurrente son 429 en `POST /pedido`: 50 a la vez supera la ráfaga autenticada de 20. El check solo acepta 201/409, así que el 429 cuenta como KO. El código usa 50 por defecto y esta guía decía 30: falta decidir la escala.
+- Los 10 KO de stock concurrente son 429 en `POST /pedido`: 50 a la vez supera la ráfaga autenticada de 20. La escala quedó en 20, la ráfaga: así todas las peticiones llegan al servicio de pedidos y el resultado solo distingue stock (201) de falta de stock (409).
+- Corrida del 13 de noviembre de 2026 con la escala nueva: 22 peticiones, 22 bien, 0 KO, máxima 351 ms y ningún 429. Las dos aserciones pasan.
 - Stock al terminar: productos 5 y 7 agotados; 1 con 1, 2 con 19, 3 con 26, 4 con 41 y 6 con 5. Reponer antes de otra corrida que compre.
