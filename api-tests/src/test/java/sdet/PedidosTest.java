@@ -516,6 +516,61 @@ class PedidosTest extends GatewayTest {
   }
 
   @Test
+  @Story("Pedir un producto agotado recibe 409")
+  @DisplayName("Pedir un producto agotado recibe 409")
+  @Description("Tras un pedido que deja el stock en 0, POST /api/v1/pedido de una unidad responde 409 y el stock sigue en 0.")
+  void pedirUnProductoAgotadoRecibe409() {
+    Sesion sesion = sesionNueva();
+    Number productoId = productoConMenosStock();
+    int disponible = stockDe(productoId);
+    Number pedidoId = null;
+    try {
+      pedidoId = given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", disponible))))
+          .when()
+          .post("/api/v1/pedido")
+          .then()
+          .statusCode(201)
+          .extract()
+          .path("id");
+
+      given()
+          .when()
+          .get("/api/v1/producto/" + productoId)
+          .then()
+          .statusCode(200)
+          .body("stock", equalTo(0))
+          .body("estado", equalTo("AGOTADO"));
+
+      given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .contentType("application/json")
+          .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
+          .when()
+          .post("/api/v1/pedido")
+          .then()
+          .statusCode(409)
+          .contentType(containsString("json"))
+          .body("status", equalTo(409))
+          .body("error", equalTo("Conflict"))
+          .body("message", equalTo(
+              "Stock insuficiente para el producto " + productoId
+                  + ". Disponible: 0, solicitado: 1"));
+
+      given()
+          .when()
+          .get("/api/v1/producto/" + productoId)
+          .then()
+          .statusCode(200)
+          .body("stock", equalTo(0));
+    } finally {
+      devolverPedido(sesion, pedidoId, productoId);
+    }
+  }
+
+  @Test
   @Story("Pedir un producto inexistente recibe 404")
   @DisplayName("Pedir un producto inexistente recibe 404")
   @Description("POST /api/v1/pedido de un producto ausente responde 404 con el mensaje No existe el producto con id.")
@@ -870,6 +925,30 @@ class PedidosTest extends GatewayTest {
 
   private static Number productoConStock() {
     return productoConStock(1);
+  }
+
+  private static Number productoConMenosStock() {
+    List<Map<String, Object>> productos = given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    Number elegido = null;
+    int menor = Integer.MAX_VALUE;
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      if (stock >= 1 && stock < menor && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        menor = stock;
+        elegido = (Number) producto.get("id");
+      }
+    }
+    if (elegido == null) {
+      throw new IllegalStateException("No hay un producto con stock");
+    }
+    return elegido;
   }
 
   private static List<Map<String, Object>> dosProductosConStock() {
