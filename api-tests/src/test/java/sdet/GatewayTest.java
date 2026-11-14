@@ -176,28 +176,6 @@ abstract class GatewayTest {
     return new PedidoCreado(respuesta.path("id"), respuesta.path("total"));
   }
 
-  @Step("Leer el total del pedido")
-  static double totalDelPedido(Sesion sesion, Number pedidoId) {
-    Response pedido = RestAssured.given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .when()
-        .get("/api/v1/pedido/" + pedidoId);
-    pedido.then().statusCode(200);
-    Number total = pedido.path("total");
-    if (total != null) {
-      return total.doubleValue();
-    }
-    Number productoId = pedido.path("items[0].productoId");
-    Number precio = RestAssured.given()
-        .when()
-        .get("/api/v1/producto/" + productoId)
-        .then()
-        .statusCode(200)
-        .extract()
-        .path("precio");
-    return precio.doubleValue();
-  }
-
   @Step("Comprobar el 401 por falta de Bearer")
   static void sinBearer(Response respuesta) {
     respuesta.then()
