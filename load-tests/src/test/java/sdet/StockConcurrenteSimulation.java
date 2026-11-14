@@ -34,7 +34,7 @@ public class StockConcurrenteSimulation extends Simulation {
       nombre = nombre.substring(0, 100);
     }
     String email = "sdet-" + UUID.randomUUID() + "@ecommerce.test";
-    String password = faker.internet().password(12, 20, true, true, true);
+    String password = faker.credentials().password(12, 20, true, true, true);
     String cuerpoRegistro =
         "{\"nombre\":\"" + json(nombre)
             + "\",\"email\":\"" + json(email)

@@ -110,7 +110,7 @@ public class StockClientesSimulation extends Simulation {
     return session
         .set("nombre", nombre)
         .set("email", "sdet-" + UUID.randomUUID() + "@ecommerce.test")
-        .set("password", faker.internet().password(12, 20, true, true, true));
+        .set("password", faker.credentials().password(12, 20, true, true, true));
   }
 
   private static String json(String value) {

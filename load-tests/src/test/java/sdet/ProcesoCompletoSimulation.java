@@ -133,7 +133,7 @@ public class ProcesoCompletoSimulation extends Simulation {
         return Map.of(
             "nombre", nombre,
             "email", "sdet-" + UUID.randomUUID() + "@ecommerce.test",
-            "password", faker.internet().password(12, 20, true, true, true));
+            "password", faker.credentials().password(12, 20, true, true, true));
       }
     };
   }
