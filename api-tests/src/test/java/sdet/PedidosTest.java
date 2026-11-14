@@ -6,7 +6,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -852,10 +851,6 @@ class PedidosTest extends GatewayTest {
     }
   }
 
-  private static Number productoConStock() {
-    return productoConStock(1);
-  }
-
   private static Number productoConMenosStock() {
     List<Map<String, Object>> productos = given()
         .when()
@@ -900,58 +895,5 @@ class PedidosTest extends GatewayTest {
       }
     }
     throw new IllegalStateException("Hacen falta dos productos con stock");
-  }
-
-  private static Number productoConStock(int minimo) {
-    List<Map<String, Object>> productos = given()
-        .when()
-        .get("/api/v1/producto")
-        .then()
-        .statusCode(200)
-        .extract()
-        .jsonPath()
-        .getList("");
-    for (Map<String, Object> producto : productos) {
-      int stock = ((Number) producto.get("stock")).intValue();
-      if (stock >= minimo && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
-        return (Number) producto.get("id");
-      }
-    }
-    throw new IllegalStateException("No hay un producto con stock de al menos " + minimo);
-  }
-
-  private static Number crearPedido(Sesion sesion, Number productoId) {
-    return given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .contentType("application/json")
-        .body(Map.of("items", List.of(Map.of("productoId", productoId, "cantidad", 1))))
-        .when()
-        .post("/api/v1/pedido")
-        .then()
-        .statusCode(201)
-        .extract()
-        .path("id");
-  }
-
-  private static void devolverPedido(Sesion sesion, Number pedidoId, Number productoId) {
-    if (pedidoId == null) {
-      return;
-    }
-    Response respuesta = given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .when()
-        .put("/api/v1/pedido/" + pedidoId + "/cancelar");
-    if (respuesta.statusCode() == 200) {
-      return;
-    }
-    String mensaje = respuesta.path("message");
-    if (mensaje != null && mensaje.contains("PAGADO")) {
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .when()
-          .put("/api/v1/producto/" + productoId + "/stock/reponer?cantidad=1")
-          .then()
-          .statusCode(200);
-    }
   }
 }

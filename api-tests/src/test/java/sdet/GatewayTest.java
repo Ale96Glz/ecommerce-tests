@@ -164,6 +164,30 @@ abstract class GatewayTest {
     throw new IllegalStateException("No hay un producto con stock bajo el tope de pago");
   }
 
+  @Step("Elegir un producto con stock disponible")
+  static Number productoConStock(int minimo) {
+    List<Map<String, Object>> productos = RestAssured.given()
+        .when()
+        .get("/api/v1/producto")
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("");
+    for (Map<String, Object> producto : productos) {
+      int stock = ((Number) producto.get("stock")).intValue();
+      if (stock >= minimo && !"AGOTADO".equals(String.valueOf(producto.get("estado")))) {
+        return (Number) producto.get("id");
+      }
+    }
+    throw new IllegalStateException("No hay un producto con stock de al menos " + minimo);
+  }
+
+  @Step("Elegir un producto con stock")
+  static Number productoConStock() {
+    return productoConStock(1);
+  }
+
   @Step("Crear un pedido y guardar su total")
   static PedidoCreado crearPedidoPagable(Sesion sesion, Number productoId) {
     Response respuesta = RestAssured.given()
@@ -174,6 +198,34 @@ abstract class GatewayTest {
         .post("/api/v1/pedido");
     respuesta.then().statusCode(201);
     return new PedidoCreado(respuesta.path("id"), respuesta.path("total"));
+  }
+
+  @Step("Crear un pedido de una unidad")
+  static Number crearPedido(Sesion sesion, Number productoId) {
+    return crearPedidoPagable(sesion, productoId).id();
+  }
+
+  @Step("Cancelar el pedido y reponer el stock si ya estaba pagado")
+  static void devolverPedido(Sesion sesion, Number pedidoId, Number productoId) {
+    if (pedidoId == null) {
+      return;
+    }
+    Response respuesta = RestAssured.given()
+        .header("Authorization", "Bearer " + sesion.token())
+        .when()
+        .put("/api/v1/pedido/" + pedidoId + "/cancelar");
+    if (respuesta.statusCode() == 200) {
+      return;
+    }
+    String mensaje = respuesta.path("message");
+    if (mensaje != null && mensaje.contains("PAGADO")) {
+      RestAssured.given()
+          .header("Authorization", "Bearer " + sesion.token())
+          .when()
+          .put("/api/v1/producto/" + productoId + "/stock/reponer?cantidad=1")
+          .then()
+          .statusCode(200);
+    }
   }
 
   @Step("Comprobar el 401 por falta de Bearer")

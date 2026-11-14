@@ -6,7 +6,6 @@ import io.qameta.allure.Feature;
 import io.qameta.allure.Severity;
 import io.qameta.allure.SeverityLevel;
 import io.qameta.allure.Story;
-import io.restassured.response.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -468,7 +467,7 @@ class PagosTest extends GatewayTest {
     PedidoSobreTope pedido = crearPedidoSobreTope(sesion);
     Number pedidoId = pedido.pedidoId();
     Number total = pedido.total();
-    esperarPedidoCanceladoPorPago(sesion, pedidoId);
+    esperarEstado(sesion, pedidoId, "CANCELADO", "PAGO_RECHAZADO");
     esperarStock(pedido.productoId(), pedido.stockAntes());
 
     // reactivar no publica OrderCreatedEvent: el pedido queda CREADO sin pago automático
@@ -580,7 +579,7 @@ class PagosTest extends GatewayTest {
     Number pedidoId = pedido.pedidoId();
     Number total = pedido.total();
     try {
-      esperarPedidoCanceladoPorPago(sesion, pedidoId);
+      esperarEstado(sesion, pedidoId, "CANCELADO", "PAGO_RECHAZADO");
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
@@ -688,52 +687,6 @@ class PagosTest extends GatewayTest {
           .body("estado", equalTo("PROCESADO"));
     } finally {
       devolverPedido(sesion, pedidoId, productoId);
-    }
-  }
-
-  private static void esperarPedidoCanceladoPorPago(Sesion sesion, Number pedidoId)
-      throws InterruptedException {
-    for (int intento = 0; intento < 20; intento++) {
-      Response respuesta = given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .when()
-          .get("/api/v1/pedido/" + pedidoId);
-      if (respuesta.statusCode() == 200
-          && "CANCELADO".equals(respuesta.path("estado"))
-          && "PAGO_RECHAZADO".equals(respuesta.path("motivoCancelacion"))) {
-        return;
-      }
-      Thread.sleep(1000);
-    }
-    given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .when()
-        .get("/api/v1/pedido/" + pedidoId)
-        .then()
-        .statusCode(200)
-        .body("estado", equalTo("CANCELADO"))
-        .body("motivoCancelacion", equalTo("PAGO_RECHAZADO"));
-  }
-
-  private static void devolverPedido(Sesion sesion, Number pedidoId, Number productoId) {
-    if (pedidoId == null) {
-      return;
-    }
-    Response respuesta = given()
-        .header("Authorization", "Bearer " + sesion.token())
-        .when()
-        .put("/api/v1/pedido/" + pedidoId + "/cancelar");
-    if (respuesta.statusCode() == 200) {
-      return;
-    }
-    String mensaje = respuesta.path("message");
-    if (mensaje != null && mensaje.contains("PAGADO")) {
-      given()
-          .header("Authorization", "Bearer " + sesion.token())
-          .when()
-          .put("/api/v1/producto/" + productoId + "/stock/reponer?cantidad=1")
-          .then()
-          .statusCode(200);
     }
   }
 }
