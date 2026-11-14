@@ -10,15 +10,11 @@ import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
 
 import io.gatling.javaapi.core.ScenarioBuilder;
-import io.gatling.javaapi.core.Session;
 import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
-import java.util.Locale;
 import java.util.Queue;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
-import net.datafaker.Faker;
 
 public class StockClientesSimulation extends Simulation {
 
@@ -26,7 +22,6 @@ public class StockClientesSimulation extends Simulation {
     int usuarios = Math.max(Integer.getInteger("load.users", 20), 2);
     int ritmoRegistro = Math.max(Integer.getInteger("paceSeconds", 1), 1);
 
-    Faker faker = new Faker(Locale.forLanguageTag("es"));
     AtomicLong productoId = new AtomicLong();
     Queue<String> tokens = new ConcurrentLinkedQueue<>();
 
@@ -44,14 +39,10 @@ public class StockClientesSimulation extends Simulation {
         .repeat(usuarios)
         .on(
             pace(Duration.ofSeconds(ritmoRegistro))
-                .exec(session -> usuario(session, faker))
                 .exec(
                     http("Registro")
                         .post("/api/v1/auth/register")
-                        .body(StringBody(session ->
-                            "{\"nombre\":\"" + json(session.getString("nombre"))
-                                + "\",\"email\":\"" + json(session.getString("email"))
-                                + "\",\"password\":\"" + json(session.getString("password")) + "\"}"))
+                        .body(StringBody(session -> Entorno.usuarioNuevo().cuerpo()))
                         .asJson()
                         .requestTimeout(Duration.ofSeconds(3))
                         .check(status().is(201))
@@ -89,24 +80,5 @@ public class StockClientesSimulation extends Simulation {
             global().responseTime().max().lt(3000),
             global().failedRequests().percent().lt(5.0))
         .maxDuration(Duration.ofSeconds((long) usuarios * ritmoRegistro + 20));
-  }
-
-  private static Session usuario(Session session, Faker faker) {
-    String nombre = faker.name().fullName();
-    if (nombre.length() > 100) {
-      nombre = nombre.substring(0, 100);
-    }
-    return session
-        .set("nombre", nombre)
-        .set("email", "sdet-" + UUID.randomUUID() + "@ecommerce.test")
-        .set("password", faker.credentials().password(12, 20, true, true, true));
-  }
-
-  private static String json(String value) {
-    return value
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\r", "\\r")
-        .replace("\n", "\\n");
   }
 }

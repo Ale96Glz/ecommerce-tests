@@ -15,11 +15,6 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
-import net.datafaker.Faker;
 
 public class ProcesoCompletoSimulation extends Simulation {
 
@@ -28,14 +23,10 @@ public class ProcesoCompletoSimulation extends Simulation {
     int rampaSegundos = Integer.getInteger("load.ramp.seconds", 600);
 
     ScenarioBuilder proceso = scenario("Proceso completo")
-        .feed(usuarios())
         .exec(
             http("Registro")
                 .post("/api/v1/auth/register")
-                .body(StringBody(session ->
-                    "{\"nombre\":\"" + json(session.getString("nombre"))
-                        + "\",\"email\":\"" + json(session.getString("email"))
-                        + "\",\"password\":\"" + json(session.getString("password")) + "\"}"))
+                .body(StringBody(session -> Entorno.usuarioNuevo().cuerpo()))
                 .asJson()
                 .requestTimeout(Duration.ofSeconds(3))
                 .check(status().is(201))
@@ -103,35 +94,5 @@ public class ProcesoCompletoSimulation extends Simulation {
             global().responseTime().max().lt(3000),
             global().failedRequests().percent().lt(5.0),
             details("Pedido cerrado").successfulRequests().count().gt(0L));
-  }
-
-  private static Iterator<Map<String, Object>> usuarios() {
-    Faker faker = new Faker(Locale.forLanguageTag("es"));
-    return new Iterator<>() {
-      @Override
-      public boolean hasNext() {
-        return true;
-      }
-
-      @Override
-      public synchronized Map<String, Object> next() {
-        String nombre = faker.name().fullName();
-        if (nombre.length() > 100) {
-          nombre = nombre.substring(0, 100);
-        }
-        return Map.of(
-            "nombre", nombre,
-            "email", "sdet-" + UUID.randomUUID() + "@ecommerce.test",
-            "password", faker.credentials().password(12, 20, true, true, true));
-      }
-    };
-  }
-
-  private static String json(String value) {
-    return value
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\r", "\\r")
-        .replace("\n", "\\n");
   }
 }
