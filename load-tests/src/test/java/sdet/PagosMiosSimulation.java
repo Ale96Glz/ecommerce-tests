@@ -2,7 +2,6 @@ package sdet;
 
 import static io.gatling.javaapi.core.CoreDsl.StringBody;
 import static io.gatling.javaapi.core.CoreDsl.atOnceUsers;
-import static io.gatling.javaapi.core.CoreDsl.incrementConcurrentUsers;
 import static io.gatling.javaapi.core.CoreDsl.jsonPath;
 import static io.gatling.javaapi.core.CoreDsl.pace;
 import static io.gatling.javaapi.core.CoreDsl.scenario;
@@ -12,7 +11,6 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Simulation;
-import io.gatling.javaapi.http.HttpProtocolBuilder;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
@@ -22,17 +20,7 @@ import net.datafaker.Faker;
 public class PagosMiosSimulation extends Simulation {
 
   public PagosMiosSimulation() {
-    String baseUrl = System.getenv("BASE_URL");
-    if (baseUrl == null || baseUrl.isBlank()) {
-      baseUrl = "https://ecommerce.local";
-    }
-
-    int paceSeconds = Integer.getInteger("paceSeconds", 1);
-    int stepUsers = Integer.getInteger("stepUsers", 5);
-    int levels = Math.max(Integer.getInteger("levels", 4), 2);
-    int levelSeconds = Math.max(Integer.getInteger("levelSeconds", 10), paceSeconds);
-    int rampSeconds = 1;
-    int totalSeconds = levels * levelSeconds + (levels - 1) * rampSeconds + 2;
+    Entorno.Escala escala = Entorno.escala();
 
     Faker faker = new Faker(Locale.forLanguageTag("es"));
     String nombre = faker.name().fullName();
@@ -47,11 +35,6 @@ public class PagosMiosSimulation extends Simulation {
             + "\",\"password\":\"" + json(password) + "\"}";
 
     AtomicReference<String> token = new AtomicReference<>("");
-
-    HttpProtocolBuilder protocolo = http
-        .baseUrl(baseUrl)
-        .shareConnections()
-        .disableWarmUp();
 
     ScenarioBuilder registro = scenario("Registro")
         .exec(
@@ -70,7 +53,7 @@ public class PagosMiosSimulation extends Simulation {
     ScenarioBuilder pagos = scenario("Mis pagos")
         .forever()
         .on(
-            pace(Duration.ofSeconds(paceSeconds))
+            pace(Duration.ofSeconds(escala.paceSeconds()))
                 .exec(
                     http("GET /api/v1/pago/mios")
                         .get("/api/v1/pago/mios")
@@ -81,18 +64,12 @@ public class PagosMiosSimulation extends Simulation {
 
     setUp(
             registro.injectOpen(atOnceUsers(1))
-                .andThen(
-                    pagos.injectClosed(
-                        incrementConcurrentUsers(stepUsers)
-                            .times(levels)
-                            .eachLevelLasting(Duration.ofSeconds(levelSeconds))
-                            .separatedByRampsLasting(Duration.ofSeconds(rampSeconds))
-                            .startingFrom(stepUsers))))
-        .protocols(protocolo)
+                .andThen(Entorno.escalera(pagos, escala)))
+        .protocols(Entorno.protocolo())
         .assertions(
             global().responseTime().max().lt(3000),
             global().failedRequests().percent().lt(5.0))
-        .maxDuration(Duration.ofSeconds(totalSeconds + 5));
+        .maxDuration(Duration.ofSeconds(escala.totalSeconds() + 5));
   }
 
   private static String json(String value) {

@@ -10,7 +10,6 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Simulation;
-import io.gatling.javaapi.http.HttpProtocolBuilder;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.UUID;
@@ -21,11 +20,6 @@ import net.datafaker.Faker;
 public class StockConcurrenteSimulation extends Simulation {
 
   public StockConcurrenteSimulation() {
-    String baseUrl = System.getenv("BASE_URL");
-    if (baseUrl == null || baseUrl.isBlank()) {
-      baseUrl = "https://ecommerce.local";
-    }
-
     int usuarios = Integer.getInteger("load.users", 20);
 
     Faker faker = new Faker(Locale.forLanguageTag("es"));
@@ -42,11 +36,6 @@ public class StockConcurrenteSimulation extends Simulation {
 
     AtomicReference<String> token = new AtomicReference<>("");
     AtomicLong productoId = new AtomicLong();
-
-    HttpProtocolBuilder protocolo = http
-        .baseUrl(baseUrl)
-        .shareConnections()
-        .disableWarmUp();
 
     ScenarioBuilder preparacion = scenario("Preparacion")
         .exec(
@@ -86,7 +75,7 @@ public class StockConcurrenteSimulation extends Simulation {
     setUp(
             preparacion.injectOpen(atOnceUsers(1))
                 .andThen(compra.injectOpen(atOnceUsers(usuarios))))
-        .protocols(protocolo)
+        .protocols(Entorno.protocolo())
         .assertions(
             global().responseTime().max().lt(3000),
             global().failedRequests().percent().lt(5.0))

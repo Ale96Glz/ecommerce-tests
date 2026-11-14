@@ -12,7 +12,6 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Session;
 import io.gatling.javaapi.core.Simulation;
-import io.gatling.javaapi.http.HttpProtocolBuilder;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Queue;
@@ -24,22 +23,12 @@ import net.datafaker.Faker;
 public class StockClientesSimulation extends Simulation {
 
   public StockClientesSimulation() {
-    String baseUrl = System.getenv("BASE_URL");
-    if (baseUrl == null || baseUrl.isBlank()) {
-      baseUrl = "https://ecommerce.local";
-    }
-
     int usuarios = Math.max(Integer.getInteger("load.users", 20), 2);
     int ritmoRegistro = Math.max(Integer.getInteger("paceSeconds", 1), 1);
 
     Faker faker = new Faker(Locale.forLanguageTag("es"));
     AtomicLong productoId = new AtomicLong();
     Queue<String> tokens = new ConcurrentLinkedQueue<>();
-
-    HttpProtocolBuilder protocolo = http
-        .baseUrl(baseUrl)
-        .shareConnections()
-        .disableWarmUp();
 
     ScenarioBuilder preparacion = scenario("Preparacion")
         .exec(
@@ -95,7 +84,7 @@ public class StockClientesSimulation extends Simulation {
     setUp(
             preparacion.injectOpen(atOnceUsers(1))
                 .andThen(compra.injectOpen(atOnceUsers(usuarios))))
-        .protocols(protocolo)
+        .protocols(Entorno.protocolo())
         .assertions(
             global().responseTime().max().lt(3000),
             global().failedRequests().percent().lt(5.0))

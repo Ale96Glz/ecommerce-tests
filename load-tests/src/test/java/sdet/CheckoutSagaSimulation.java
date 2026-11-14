@@ -14,7 +14,6 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Simulation;
-import io.gatling.javaapi.http.HttpProtocolBuilder;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Locale;
@@ -25,18 +24,8 @@ import net.datafaker.Faker;
 public class CheckoutSagaSimulation extends Simulation {
 
   public CheckoutSagaSimulation() {
-    String baseUrl = System.getenv("BASE_URL");
-    if (baseUrl == null || baseUrl.isBlank()) {
-      baseUrl = "https://ecommerce.local";
-    }
-
     int usuarios = Integer.getInteger("load.users", 20);
     int rampaSegundos = Integer.getInteger("load.ramp.seconds", 60);
-
-    HttpProtocolBuilder protocolo = http
-        .baseUrl(baseUrl)
-        .shareConnections()
-        .disableWarmUp();
 
     ScenarioBuilder saga = scenario("Checkout saga")
         .feed(usuarios())
@@ -108,7 +97,7 @@ public class CheckoutSagaSimulation extends Simulation {
                         .check(jsonPath("$[?(@.tipo == 'PAGO_PROCESADO')].tipo").find().exists())));
 
     setUp(saga.injectOpen(rampUsers(usuarios).during(Duration.ofSeconds(rampaSegundos))))
-        .protocols(protocolo)
+        .protocols(Entorno.protocolo())
         .maxDuration(Duration.ofSeconds(rampaSegundos + 45))
         .assertions(
             global().responseTime().max().lt(3000),
