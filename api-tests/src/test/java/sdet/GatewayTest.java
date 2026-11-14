@@ -83,6 +83,20 @@ abstract class GatewayTest {
     return new Sesion(id, email, token);
   }
 
+  @Step("Abrir una sesión de administrador")
+  static Sesion sesionAdmin() {
+    String email = valorEntorno("ADMIN_EMAIL", "admin@ecommerce.local");
+    String password = valorEntorno("ADMIN_PASSWORD", "Admin1234");
+    Response login = postIdentidad(LOGIN, Map.of("email", email, "password", password));
+    login.then().statusCode(200).body("rol", equalTo("ADMIN"));
+    return new Sesion(login.path("userId"), email, login.path("token"));
+  }
+
+  private static String valorEntorno(String nombre, String defecto) {
+    String valor = System.getenv(nombre);
+    return valor == null || valor.isBlank() ? defecto : valor;
+  }
+
   @Step("Crear un pedido cuyo total supera el tope de pago")
   static PedidoSobreTope crearPedidoSobreTope(Sesion sesion) {
     Map<String, Object> producto = productoParaSuperarTope();

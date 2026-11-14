@@ -121,6 +121,34 @@ class CatalogoTest extends GatewayTest {
   }
 
   @Test
+  @Story("Un ADMIN crea y borra una categoría")
+  @DisplayName("Un ADMIN crea y borra una categoría")
+  @Description("POST /api/v1/categoria con un token ADMIN responde 201; DELETE de esa categoría responde 204.")
+  void adminCreaYBorraUnaCategoria() {
+    String nombre = "Sdet Admin " + System.currentTimeMillis();
+    Sesion admin = sesionAdmin();
+    Number id = given()
+        .header("Authorization", "Bearer " + admin.token())
+        .contentType(ContentType.JSON)
+        .body(Map.of("nombre", nombre, "descripcion", "Prueba"))
+        .when()
+        .post("/api/v1/categoria")
+        .then()
+        .statusCode(201)
+        .contentType(containsString("json"))
+        .body("nombre", equalTo(nombre))
+        .extract()
+        .path("id");
+
+    given()
+        .header("Authorization", "Bearer " + admin.token())
+        .when()
+        .delete("/api/v1/categoria/" + id)
+        .then()
+        .statusCode(204);
+  }
+
+  @Test
   @Story("El catálogo de productos se pagina")
   @DisplayName("El catálogo de productos se pagina")
   @Description("GET /api/v1/producto/pageable responde 200 con content, page 0 y size 1.")

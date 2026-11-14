@@ -2,7 +2,7 @@
 
 Cada fila es un test. El nombre es el `@DisplayName` y el resultado es el contrato: código HTTP y forma del JSON.
 
-Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la contraseña `Passw0rd!123`.
+Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la contraseña `Passw0rd!123`. Los casos de ADMIN usan el usuario demo `admin@ecommerce.local` (`ADMIN_EMAIL` y `ADMIN_PASSWORD` para cambiarlo).
 
 ## Gateway
 
@@ -72,6 +72,7 @@ Cada usuario de prueba usa un email `sdet-<millis>-<nano>@ecommerce.test` y la c
 | Un usuario no puede borrar un producto | 403, `Se requiere rol ADMIN` |
 | Un usuario no puede editar una categoría | 403, `Se requiere rol ADMIN` |
 | Un usuario no puede borrar una categoría | 403, `Se requiere rol ADMIN` |
+| Un ADMIN crea y borra una categoría | 201 con `nombre`; 204 al borrar |
 | Descontar stock de un producto inexistente recibe 404 | `No se encontró el producto con id` |
 | Pedir más stock del disponible recibe 409 | `Stock insuficiente para el producto` |
 | Reponer stock de un producto inexistente recibe 404 | `No se encontró el producto con id` |
