@@ -12,27 +12,14 @@ import static io.gatling.javaapi.http.HttpDsl.status;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Simulation;
 import java.time.Duration;
-import java.util.Locale;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import net.datafaker.Faker;
 
 public class PagosMiosSimulation extends Simulation {
 
   public PagosMiosSimulation() {
     Entorno.Escala escala = Entorno.escala();
 
-    Faker faker = new Faker(Locale.forLanguageTag("es"));
-    String nombre = faker.name().fullName();
-    if (nombre.length() > 100) {
-      nombre = nombre.substring(0, 100);
-    }
-    String email = "sdet-" + UUID.randomUUID() + "@ecommerce.test";
-    String password = faker.credentials().password(12, 20, true, true, true);
-    String cuerpoRegistro =
-        "{\"nombre\":\"" + json(nombre)
-            + "\",\"email\":\"" + json(email)
-            + "\",\"password\":\"" + json(password) + "\"}";
+    String cuerpoRegistro = Entorno.usuarioNuevo().cuerpo();
 
     AtomicReference<String> token = new AtomicReference<>("");
 
@@ -70,13 +57,5 @@ public class PagosMiosSimulation extends Simulation {
             global().responseTime().max().lt(3000),
             global().failedRequests().percent().lt(5.0))
         .maxDuration(Duration.ofSeconds(escala.totalSeconds() + 5));
-  }
-
-  private static String json(String value) {
-    return value
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\r", "\\r")
-        .replace("\n", "\\n");
   }
 }

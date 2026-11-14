@@ -7,6 +7,9 @@ import io.gatling.javaapi.core.PopulationBuilder;
 import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 import java.time.Duration;
+import java.util.Locale;
+import java.util.UUID;
+import net.datafaker.Faker;
 
 /** Configuración común de las simulaciones: URL base, protocolo y escalera de usuarios. */
 final class Entorno {
@@ -40,6 +43,31 @@ final class Entorno {
             .startingFrom(escala.stepUsers()));
   }
 
+  static Usuario usuarioNuevo() {
+    Faker faker = new Faker(Locale.forLanguageTag("es"));
+    String nombre = faker.name().fullName();
+    return new Usuario(
+        nombre.length() > 100 ? nombre.substring(0, 100) : nombre,
+        "sdet-" + UUID.randomUUID() + "@ecommerce.test",
+        faker.credentials().password(12, 20, true, true, true));
+  }
+
+  private static String json(String value) {
+    return value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n");
+  }
+
   record Escala(int paceSeconds, int stepUsers, int levels, int levelSeconds, int rampSeconds,
       int totalSeconds) {}
+
+  record Usuario(String nombre, String email, String password) {
+    String cuerpo() {
+      return "{\"nombre\":\"" + json(nombre)
+          + "\",\"email\":\"" + json(email)
+          + "\",\"password\":\"" + json(password) + "\"}";
+    }
+  }
 }
