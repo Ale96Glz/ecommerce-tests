@@ -1,6 +1,6 @@
 # Simulaciones de carga
 
-Cada clase en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. Las cifras son de laboratorio, en la máquina que inyecta, contra el gateway local.
+Cada `*Simulation` en `src/test/java/sdet/` es un escenario: su ruta, su carga y su criterio de éxito. La URL base, la escalera y el usuario sintético salen de `Entorno`. Las cifras son de laboratorio, en la máquina que inyecta, contra el gateway local.
 
 Cómo correrlas está en el [README](../README.md).
 
@@ -99,7 +99,7 @@ Modelo abierto: cada usuario entra una vez, recorre y sale. Las conexiones se co
 
 El usuario sintético: DataFaker arma el nombre en español (máximo 100 caracteres) y una contraseña de 12 a 20 caracteres con mayúscula, dígito y signo. El correo es `sdet-<uuid>@ecommerce.test`.
 
-Estas corridas **escriben**. Crean usuarios y, si llegan al pedido, descuentan stock. Hay que reponer el producto entre corridas de laboratorio.
+Estas corridas **escriben**. Crean usuarios y, si llegan al pedido, descuentan stock. Hay que reponer el producto entre corridas de laboratorio, y debe existir al menos un producto pagable (activo, con stock y precio ≤ 100): sin él la aserción de «Pedido cerrado» falla por catálogo, no por capacidad.
 
 ### Recorrido completo — `sdet.ProcesoCompletoSimulation`
 
@@ -121,7 +121,7 @@ Corrida del 5 de noviembre de 2026, gateway local, esos valores: 500 registros y
 
 ### Saga de checkout — `sdet.CheckoutSagaSimulation`
 
-El mismo recorrido. Tope más bajo y aserciones en el reporte: ninguna petición por encima de 3 segundos y menos del 5 % de fallos. Un 409 al crear el pedido cuenta como fallo (stock, no gateway).
+El mismo recorrido. Tope más bajo y aserciones en el reporte: ninguna petición por encima de 3 segundos, menos del 5 % de fallos y al menos un pedido cerrado. Un 409 al crear el pedido no cuenta como fallo, pero deja a ese usuario sin pedido cerrado.
 
 Sin propiedades: 20 usuarios en 60 segundos. `load.users` y `load.ramp.seconds` van en la JVM de Gatling.
 
@@ -143,6 +143,8 @@ Sin propiedades: 20 pedidos a la vez. Coincide con la ráfaga autenticada: todas
 | 5xx | Fallo |
 
 201 y 409 cumplen el criterio de Gatling. Hay que reponer el producto entre corridas.
+
+El producto necesita stock ≥ usuarios. Con menos unidades, las peticiones que no alcanzan unidad esperan el bloqueo del mismo registro y pueden pasarse del tiempo límite de 3 s en vez de responder 409.
 
 ### Contención de stock entre clientes — `sdet.StockClientesSimulation`
 
@@ -178,12 +180,13 @@ Gateway local, las 15 simulaciones corridas una por una para que un fallo no ocu
 | Recorrido completo | 10 usuarios / 10 s | 93 | 90 | 3 | 64 | 166 | 166 |
 | Saga de checkout | 20 usuarios / 60 s | 251 | 251 | 0 | 62 | 98 | 206 |
 | Stock clientes | 20 clientes | 41 | 41 | 0 | 193 | 193 | 193 |
-| Stock concurrente | 50 usuarios | 52 | 42 | 10 | 485 | 487 | 487 |
+| Stock concurrente | 50 usuarios (escala anterior) | 52 | 42 | 10 | 485 | 487 | 487 |
 
 Notas de esa corrida:
 
-- Solo la saga de checkout tiene aserciones. Las otras 14 terminan en `BUILD SUCCESS` aunque tengan KO: ese es el hueco que cierra el paso de aserciones.
+- Las 15 tienen las mismas dos aserciones (máximo bajo 3 s y menos del 5 % de fallos); los dos recorridos añaden que haya al menos un pedido cerrado. Un KO ya no termina en `BUILD SUCCESS`.
 - Los 3 KO del recorrido completo son 429 en el listado, residuo del límite de la corrida anterior; 7 de 10 usuarios llegaron al pedido. No es falta de capacidad.
 - Los 10 KO de stock concurrente son 429 en `POST /pedido`: 50 a la vez supera la ráfaga autenticada de 20. La escala quedó en 20, la ráfaga: así todas las peticiones llegan al servicio de pedidos y el resultado solo distingue stock (201) de falta de stock (409).
 - Corrida del 13 de noviembre de 2026 con la escala nueva: 22 peticiones, 22 bien, 0 KO, máxima 351 ms y ningún 429. Las dos aserciones pasan.
 - Stock al terminar: productos 5 y 7 agotados; 1 con 1, 2 con 19, 3 con 26, 4 con 41 y 6 con 5. Reponer antes de otra corrida que compre.
+- Corrida del 14 de noviembre de 2026, con la configuración y el alta de usuarios ya centralizados en `Entorno`: las 15 con 0 KO y las aserciones en verde. El recorrido completo fue con 10 usuarios en 30 s; producto 6 repuesto con 100 unidades para las que compran.
