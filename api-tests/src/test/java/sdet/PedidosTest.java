@@ -837,6 +837,7 @@ class PedidosTest extends GatewayTest {
     Number pedidoId = pedido.pedidoId();
     try {
       esperarEstado(sesion, pedidoId, "CANCELADO", "PAGO_RECHAZADO");
+      esperarStock(productoId, pedido.stockAntes());
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
