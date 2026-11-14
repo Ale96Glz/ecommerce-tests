@@ -2,7 +2,7 @@
 
 Contrato HTTP de identidad, catálogo, pedidos, pagos y notificaciones con REST Assured, JUnit 5 y Allure. Cada test comprueba un comportamiento: el código HTTP y la forma del JSON. Las peticiones salen por `BASE_URL`. No se llama a los puertos internos de los servicios.
 
-La carga con Gatling está en [ecommerce-gatling](https://github.com/Ale96Glz/ecommerce-gatling).
+La carga con Gatling vive en el mismo monorepo: `load-tests`, documentada en [load-tests/README.md](../load-tests/README.md).
 
 ## Requisitos
 

@@ -1,6 +1,6 @@
 # Pruebas de carga del gateway
 
-Simulaciones Gatling contra el gateway de laboratorio. Cada clase en `src/test/java/sdet/` es un escenario. Qué hace cada una, el criterio y cómo leer 429 o 409 está en [docs/pruebas.md](docs/pruebas.md).
+Simulaciones Gatling contra el gateway de laboratorio. Cada `*Simulation` en `src/test/java/sdet/` es un escenario; la URL base, la escalera y el usuario sintético salen de `Entorno`. Qué hace cada una, el criterio y cómo leer 429 o 409 está en [docs/pruebas.md](docs/pruebas.md).
 
 Las cifras son de la máquina que inyecta, contra `BASE_URL`. Las pruebas de contrato están en el módulo `api-tests`.
 

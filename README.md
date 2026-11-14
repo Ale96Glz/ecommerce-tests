@@ -56,11 +56,22 @@ mvn -pl load-tests gatling:test "-Dgatling.simulationClass=sdet.CatalogoProducto
 ```
 
 ### 3. Compilacion General del Monorepo
-Validar que la estructura completa compila correctamente sin ejecutar pruebas:
+Validar que los dos modulos, codigo y pruebas, compilan sin ejecutar las suites (lo mismo que hace el CI):
 ```bash
-mvn -q -DskipTests compile
+mvn -B test-compile
 ```
 
 ## Nota Importante sobre Rate Limiting
 
 Las pruebas de API y las pruebas de carga no deben ejecutarse simultáneamente contra el mismo gateway si este cuenta con restricciones estrictas de rate-limiting (por ejemplo, un limite de 1 peticion por segundo). Las solicitudes concurrentes masivas de las simulaciones de Gatling saturarán los contadores y provocarán rechazos o fallos en las pruebas funcionales de REST Assured.
+
+## Integracion continua
+
+GitHub Actions compila los dos modulos en cada push y pull request con `mvn -B test-compile`. No ejecuta las suites: los runners no alcanzan el gateway.
+
+## Documentacion
+
+- [Casos de contrato](api-tests/docs/casos.md): un caso por comportamiento del API, con el resultado esperado.
+- [Hallazgos de contrato](api-tests/docs/hallazgos.md): defectos de negocio, el contrato actual contra el esperado.
+- [Simulaciones de carga](load-tests/docs/pruebas.md): que hace cada escenario, su escala y sus aserciones.
+- [Pruebas de contrato](api-tests/README.md) y [pruebas de carga](load-tests/README.md): requisitos y comandos de cada modulo.
