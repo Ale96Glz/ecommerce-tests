@@ -1,0 +1,151 @@
+name: E2E + Allure
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"
+  push:
+    branches: [main]
+    paths:
+      - "api-tests/**"
+      - ".github/workflows/e2e-report.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: e2e-pages
+  cancel-in-progress: false
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Traer el stack de microservicios
+        uses: actions/checkout@v4
+        with:
+          repository: Ale96Glz/microservices-ecommerce
+          path: stack
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Levantar el stack con las imagenes publicadas
+        working-directory: stack
+        env:
+          # Fijado al release de microservices-ecommerce; `latest` quedo viejo en GHCR.
+          IMAGE_TAG: 1.2.6
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull \
+            postgres kafka redis zipkin auth-service catalogo-service pedidos-service \
+            pagos-service notificaciones-service api-gateway
+          docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d \
+            --wait --wait-timeout 240 --no-build \
+            postgres kafka redis zipkin auth-service catalogo-service pedidos-service \
+            pagos-service notificaciones-service api-gateway
+
+      # --wait no espera a los servicios sin healthcheck; el catalogo necesita Flyway.
+      - name: Esperar catalogo y admin
+        run: |
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/producto)
+            [ "$code" = "200" ] && break
+            sleep 2
+          done
+          [ "$code" = "200" ] || { echo "catalogo no respondio (HTTP $code)"; exit 1; }
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/api/v1/auth/login \
+              -H 'Content-Type: application/json' \
+              -d '{"email":"admin@ecommerce.local","password":"Admin1234"}')
+            [ "$code" = "200" ] && break
+            sleep 2
+          done
+          [ "$code" = "200" ] || { echo "admin no respondio (HTTP $code)"; exit 1; }
+
+      # La suite asume catalogo no vacio; el admin de laboratorio lo crea auth-service.
+      - name: Sembrar catalogo
+        working-directory: stack
+        run: |
+          docker compose exec -T postgres psql -U ecommerce -d catalogo_db -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO categoria (nombre, descripcion)
+          SELECT 'SDET', 'Datos de la suite de contrato'
+          WHERE NOT EXISTS (SELECT 1 FROM categoria WHERE nombre = 'SDET');
+          INSERT INTO producto (nombre, descripcion, precio, stock, categoria_id, estado, fecha_creacion)
+          SELECT 'SDET Producto', 'Dato de la suite de contrato', 30.00, 1000, c.id, 'ACTIVO', now()
+          FROM categoria c
+          WHERE c.nombre = 'SDET'
+            AND NOT EXISTS (SELECT 1 FROM producto WHERE nombre = 'SDET Producto');
+          INSERT INTO producto (nombre, descripcion, precio, stock, categoria_id, estado, fecha_creacion)
+          SELECT 'SDET Producto 2', 'Dato de la suite de contrato', 40.00, 1000, c.id, 'ACTIVO', now()
+          FROM categoria c
+          WHERE c.nombre = 'SDET'
+            AND NOT EXISTS (SELECT 1 FROM producto WHERE nombre = 'SDET Producto 2');
+          SQL
+
+      - name: Recuperar historial de Allure
+        uses: actions/cache@v4
+        with:
+          path: api-tests/allure-history
+          key: allure-history-${{ github.run_id }}
+          restore-keys: allure-history-
+
+      - name: Ejecutar pruebas de contrato
+        env:
+          BASE_URL: http://localhost:8080
+        run: |
+          set +e
+          mvn -B -pl api-tests test
+          echo "TEST_EXIT=$?" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Logs del stack si algo falla
+        if: failure()
+        working-directory: stack
+        run: docker compose logs --tail=200
+
+      - name: Apagar el stack
+        if: always()
+        working-directory: stack
+        run: docker compose down -v -t 30
+
+      - name: Guardar el reporte como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: api-tests/target/allure-report
+          if-no-files-found: ignore
+
+      - name: Configurar Pages
+        if: always()
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Subir el reporte a Pages
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: api-tests/target/allure-report
+
+      - name: Desplegar el reporte
+        if: always()
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Marcar el job en rojo si hay pruebas fallidas
+        if: always() && env.TEST_EXIT != '0'
+        run: |
+          echo "La suite termino con fallos; el reporte se publico igual."
+          exit 1

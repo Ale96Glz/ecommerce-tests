@@ -1,6 +1,16 @@
 # Monorepo de Pruebas de E-Commerce (ecommerce-tests)
 
+[![CI](https://github.com/Ale96Glz/ecommerce-tests/actions/workflows/ci.yml/badge.svg)](https://github.com/Ale96Glz/ecommerce-tests/actions/workflows/ci.yml)
+[![E2E + Allure](https://github.com/Ale96Glz/ecommerce-tests/actions/workflows/e2e-report.yml/badge.svg)](https://github.com/Ale96Glz/ecommerce-tests/actions/workflows/e2e-report.yml)
+[![Reporte Allure](https://img.shields.io/badge/Reporte-Allure-1f6feb?style=flat-square)](https://ale96glz.github.io/ecommerce-tests/)
+
 Repositorio centralizado para las pruebas automatizadas del sistema de microservicios de E-Commerce, compuesto por pruebas funcionales de API y pruebas de rendimiento/carga.
+
+## Resultados
+
+- [Reporte Allure](https://ale96glz.github.io/ecommerce-tests/): última corrida de `api-tests` contra el stack de `microservices-ecommerce` levantado desde las imágenes de GHCR.
+- [CI](https://github.com/Ale96Glz/ecommerce-tests/actions/workflows/ci.yml): compila los dos módulos en cada push y pull request.
+- [E2E + Allure](https://github.com/Ale96Glz/ecommerce-tests/actions/workflows/e2e-report.yml): levanta el stack, ejecuta la suite y publica el reporte.
 
 ## Estructura del Proyecto
 
@@ -67,7 +77,12 @@ Las pruebas de API y las pruebas de carga no deben ejecutarse simultáneamente c
 
 ## Integracion continua
 
-GitHub Actions compila los dos modulos en cada push y pull request con `mvn -B test-compile`. No ejecuta las suites: los runners no alcanzan el gateway.
+Dos workflows de GitHub Actions:
+
+- `ci.yml` compila los dos modulos con `mvn -B test-compile` en cada push y pull request. No necesita gateway.
+- `e2e-report.yml` clona `microservices-ecommerce`, levanta el stack con las imagenes publicadas en GHCR, siembra un catalogo minimo, ejecuta `api-tests` con `BASE_URL=http://localhost:8080` y publica el reporte Allure en GitHub Pages. Corre cuando cambia `api-tests`, cada lunes y a mano. Las imagenes se fijan al release `1.2.6` (`IMAGE_TAG`); al subir la version de `microservices-ecommerce`, actualiza ese valor.
+
+El workflow habilita Pages con origen **GitHub Actions** en la primera corrida (`configure-pages`). Si la organización lo bloquea, actívalo a mano en Settings > Pages > Build and deployment > Source.
 
 ## Documentacion
 
