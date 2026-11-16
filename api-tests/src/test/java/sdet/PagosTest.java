@@ -329,10 +329,10 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
-  @Story("Un monto distinto al del pedido recibe 409")
-  @DisplayName("Un monto distinto al del pedido recibe 409")
-  @Description("POST /api/v1/pago con un monto distinto al total responde 409 y el pago del sistema queda PROCESADO por el total correcto.")
-  void unMontoDistintoAlDelPedidoRecibe409() throws InterruptedException {
+  @Story("Un monto distinto al del pedido recibe 422")
+  @DisplayName("Un monto distinto al del pedido recibe 422")
+  @Description("POST /api/v1/pago con un monto distinto al total responde 422 (o 409 si el pago automático ya movió el pedido) y el pago del sistema queda PROCESADO por el total correcto.")
+  void unMontoDistintoAlDelPedidoRecibe422() throws InterruptedException {
     Sesion sesion = sesionNueva();
     Number productoId = productoPagable();
     Number pedidoId = null;
@@ -352,12 +352,12 @@ class PagosTest extends GatewayTest {
           .when()
           .post("/api/v1/pago")
           .then()
-          .statusCode(409)
+          .statusCode(anyOf(equalTo(422), equalTo(409)))
           .contentType(containsString("json"))
-          .body("status", equalTo(409))
-          .body("error", equalTo("Conflict"))
+          .body("status", anyOf(equalTo(422), equalTo(409)))
+          .body("error", anyOf(equalTo("Unprocessable Entity"), equalTo("Conflict")))
           .body("message", anyOf(
-              containsString("El monto no coincide con el total del pedido"),
+              containsString("no coincide con el total del pedido"),
               containsString("no está en estado CREADO")));
 
       esperarPago(sesion, pedidoId, "PROCESADO")
@@ -369,10 +369,10 @@ class PagosTest extends GatewayTest {
   }
 
   @Test
-  @Story("Un monto menor al del pedido recibe 409")
-  @DisplayName("Un monto menor al del pedido recibe 409")
-  @Description("POST /api/v1/pago con un monto menor al total responde 409 y el pago del sistema queda PROCESADO por el total correcto.")
-  void unMontoMenorAlDelPedidoRecibe409() throws InterruptedException {
+  @Story("Un monto menor al del pedido recibe 422")
+  @DisplayName("Un monto menor al del pedido recibe 422")
+  @Description("POST /api/v1/pago con un monto menor al total responde 422 (o 409 si el pago automático ya movió el pedido) y el pago del sistema queda PROCESADO por el total correcto.")
+  void unMontoMenorAlDelPedidoRecibe422() throws InterruptedException {
     Sesion sesion = sesionNueva();
     Number productoId = productoPagable();
     Number pedidoId = null;
@@ -395,12 +395,12 @@ class PagosTest extends GatewayTest {
           .when()
           .post("/api/v1/pago")
           .then()
-          .statusCode(409)
+          .statusCode(anyOf(equalTo(422), equalTo(409)))
           .contentType(containsString("json"))
-          .body("status", equalTo(409))
-          .body("error", equalTo("Conflict"))
+          .body("status", anyOf(equalTo(422), equalTo(409)))
+          .body("error", anyOf(equalTo("Unprocessable Entity"), equalTo("Conflict")))
           .body("message", anyOf(
-              containsString("El monto no coincide con el total del pedido"),
+              containsString("no coincide con el total del pedido"),
               containsString("no está en estado CREADO")));
 
       esperarPago(sesion, pedidoId, "PROCESADO")
@@ -414,7 +414,7 @@ class PagosTest extends GatewayTest {
   @Test
   @Story("Tras un monto distinto el total exacto queda procesado")
   @DisplayName("Tras un monto distinto el total exacto queda procesado")
-  @Description("Tras un 409 por monto distinto, el pago del pedido queda PROCESADO por el total exacto, lo cree el POST o el sistema.")
+  @Description("Tras un 422 por monto distinto, el pago del pedido queda PROCESADO por el total exacto, lo cree el POST o el sistema.")
   void trasUnMontoDistintoElTotalExactoQuedaProcesado() throws InterruptedException {
     Sesion sesion = sesionNueva();
     Number productoId = productoPagable();
@@ -435,7 +435,7 @@ class PagosTest extends GatewayTest {
           .when()
           .post("/api/v1/pago")
           .then()
-          .statusCode(409);
+          .statusCode(anyOf(equalTo(422), equalTo(409)));
 
       given()
           .header("Authorization", "Bearer " + sesion.token())
